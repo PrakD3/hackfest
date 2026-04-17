@@ -16,6 +16,7 @@ async def get_molecules(session_id: str):
         "session_id": session_id,
         "query": state.get("query"),
         "mutation_context": state.get("mutation_context"),
+        "literature": state.get("literature", []),
         "structures": state.get("structures", []),
         "pdb_content": state.get("pdb_content", ""),
         "generated_molecules": state.get("generated_molecules", []),

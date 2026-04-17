@@ -7,7 +7,7 @@ const AGENTS = [
   "MutationParser", "Planner", "Fetch", "StructurePrep", "PocketDetection",
   "MoleculeGeneration", "Docking", "Selectivity", "ADMET", "LeadOptimization",
   "Resistance", "Similarity", "Synergy", "ClinicalTrial", "KnowledgeGraph",
-  "Explainability", "Report", "Orchestrator",
+  "Explainability", "Report",
 ];
 
 type AgentStatus = "running" | "complete" | "error" | "waiting";
@@ -18,13 +18,19 @@ interface Props {
   startTime?: number;
 }
 
+function normalizeAgentName(name: string): string {
+  // Backend emits "<Name>Agent" while UI labels omit the suffix.
+  return name.endsWith("Agent") ? name.slice(0, -5) : name;
+}
+
 export function PipelineStatus({ events, isComplete, startTime }: Props) {
   const statusMap: Record<string, AgentStatus> = {};
   for (const e of events) {
     if (e.agent) {
-      if (e.event === "agent_start") statusMap[e.agent] = "running";
-      if (e.event === "agent_complete") statusMap[e.agent] = "complete";
-      if (e.event === "agent_error") statusMap[e.agent] = "error";
+      const key = normalizeAgentName(e.agent);
+      if (e.event === "agent_start") statusMap[key] = "running";
+      if (e.event === "agent_complete") statusMap[key] = "complete";
+      if (e.event === "agent_error") statusMap[key] = "error";
     }
   }
 
