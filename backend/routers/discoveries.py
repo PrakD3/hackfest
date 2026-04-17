@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 import agents.OrchestratorAgent  # Import module, not variable
 
 from utils.db import get_discovery, list_discoveries, save_discovery
+from utils.session_manager import get_session as get_session_redis
 
 router = APIRouter()
 
@@ -23,10 +24,14 @@ async def get_one(discovery_id: str):
 
 @router.post("/discoveries/{session_id}/save")
 async def save_session(session_id: str):
-    # Access _sessions dynamically to handle module reloads
-    state = agents.OrchestratorAgent._sessions.get(session_id)
+    # Try Redis first (survives restarts), then fall back to in-memory
+    state = await get_session_redis(session_id)
+    if not state:
+        state = agents.OrchestratorAgent._sessions.get(session_id)
+    
     if not state:
         raise HTTPException(status_code=404, detail="Session not found")
+    
     did = await save_discovery(state)
     if not did:
         from utils.db import get_engine

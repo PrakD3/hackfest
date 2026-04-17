@@ -1,4 +1,72 @@
 #!/usr/bin/env python3
+"""Test Save Discovery with longer pipeline wait time"""
+
+import urllib.request
+import json
+import time
+
+BASE_URL = "http://localhost:8000"
+
+print("\n" + "="*70)
+print("TEST: Save Discovery Flow (End-to-End)")
+print("="*70)
+
+# Step 1: Check health
+print("\n[1] Checking backend health...")
+try:
+    with urllib.request.urlopen(f"{BASE_URL}/api/health") as resp:
+        data = json.loads(resp.read())
+        print(f"✅ Backend: {data['status']}")
+except Exception as e:
+    print(f"❌ Backend error: {e}")
+    exit(1)
+
+# Step 2: Create analysis
+print("\n[2] Creating analysis session...")
+try:
+    req = urllib.request.Request(
+        f"{BASE_URL}/api/analyze",
+        data=json.dumps({"query": "Test EGFR mutation", "mode": "full"}).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    with urllib.request.urlopen(req) as resp:
+        result = json.loads(resp.read())
+        session_id = result["session_id"]
+        print(f"✅ Session: {session_id}")
+except Exception as e:
+    print(f"❌ Failed: {e}")
+    exit(1)
+
+# Step 3: Wait for pipeline to complete (20 seconds should be enough)
+print("\n[3] Waiting for pipeline to complete (20 seconds)...")
+for i in range(20, 0, -1):
+    print(f"   {i}s remaining...", end="\r")
+    time.sleep(1)
+
+# Step 4: Check if discovery was auto-saved
+print("\n[4] Checking if discovery was auto-saved...")
+try:
+    with urllib.request.urlopen(f"{BASE_URL}/api/discoveries") as resp:
+        discoveries = json.loads(resp.read())
+        if discoveries:
+            latest = discoveries[0]
+            print(f"✅ Auto-saved discovery found!")
+            print(f"   ID: {latest.get('id')}")
+            print(f"   Session: {latest.get('session_id')}")
+            print(f"   Query: {latest.get('query')}")
+            print(f"   Created: {latest.get('created_at')}")
+        else:
+            print(f"❌ No discoveries found in database")
+            print("   Pipeline may still be running or auto-save failed")
+except Exception as e:
+    print(f"❌ Error: {e}")
+    exit(1)
+
+print("\n" + "="*70)
+print("✅ TEST COMPLETE")
+print("="*70)
+#!/usr/bin/env python3
 """Test AUTO_SAVE_DISCOVERIES - wait for full pipeline, then verify discovery was saved"""
 
 import urllib.request

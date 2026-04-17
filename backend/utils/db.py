@@ -52,8 +52,14 @@ async def init_db():
 
 
 async def save_discovery(state: dict) -> str:
+    from utils.logger import get_logger
+    logger = get_logger("db")
+    
     engine = get_engine()
+    logger.info(f"save_discovery: engine={engine}, DATABASE_URL configured={bool(DATABASE_URL)}")
+    
     if not engine:
+        logger.warning(f"save_discovery: NO ENGINE - cannot save discovery")
         return ""
     
     # If already saved, return existing discovery_id
@@ -98,10 +104,13 @@ async def save_discovery(state: dict) -> str:
         return did
     except Exception as e:
         from utils.logger import get_logger
-
-        get_logger("db").error(f"save_discovery: {e}")
         import traceback
-        traceback.print_exc()
+        
+        logger = get_logger("db")
+        logger.error(f"save_discovery FAILED: {str(e)}")
+        logger.error(f"Exception type: {type(e).__name__}")
+        logger.error(f"Full traceback:\n{traceback.format_exc()}")
+        print(f"\n❌ SAVE_DISCOVERY ERROR:\n{traceback.format_exc()}\n", flush=True)
         return ""
 
 

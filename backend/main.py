@@ -24,6 +24,9 @@ warnings.filterwarnings("ignore", message=".*normalization.*")
 async def lifespan(app: FastAPI):
     await init_db()
     yield
+    # Cleanup: close Redis connection gracefully
+    from utils.session_manager import close_redis
+    await close_redis()
 
 app = FastAPI(title="Drug Discovery AI", version="3.0.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware,
