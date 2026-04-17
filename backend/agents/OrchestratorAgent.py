@@ -66,7 +66,7 @@ def _import_agent(name: str):
 
 
 class OrchestratorAgent:
-    """Runs the full 17-agent pipeline sequentially with SSE events."""
+    """Runs the full 19-agent V4 pipeline sequentially with SSE events."""
 
     async def run_pipeline(self, query: str, session_id: str, mode: str = "full") -> dict:
         from utils.logger import get_logger
