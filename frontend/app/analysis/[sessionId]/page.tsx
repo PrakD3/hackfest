@@ -2,8 +2,25 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Header } from "@/app/components/layout/Header";
-import { Footer } from "@/app/components/layout/Footer";
+import { AlertCircle, ArrowLeft } from "lucide-react";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/app/components/ui/tabs";
+import { Badge } from "@/app/components/ui/badge";
+import { Progress } from "@/app/components/ui/progress";
+import { Skeleton } from "@/app/components/ui/skeleton";
+import { useSSEStream } from "@/app/hooks/useSSEStream";
+import { getSessionResult } from "@/app/lib/api";
+import type {
+  PipelineState,
+  FinalReport,
+  SelectivityResult,
+} from "@/app/lib/types";
+
+// Components
 import { PipelineStatus } from "@/app/components/analysis/PipelineStatus";
 import { MoleculeCard } from "@/app/components/analysis/MoleculeCard";
 import { ADMETPanel } from "@/app/components/analysis/ADMETPanel";
@@ -18,23 +35,10 @@ import { SaveDiscoveryButton } from "@/app/components/analysis/SaveDiscoveryButt
 import { SimilarityPanel } from "@/app/components/analysis/SimilarityPanel";
 import { ExportButton } from "@/app/components/analysis/ExportButton";
 import { EvolutionTree } from "@/app/components/analysis/EvolutionTree";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/app/components/ui/tabs";
-import { Badge } from "@/app/components/ui/badge";
-import { Progress } from "@/app/components/ui/progress";
-import { Skeleton } from "@/app/components/ui/skeleton";
-import { useSSEStream } from "@/app/hooks/useSSEStream";
-import type {
-  PipelineState,
-  FinalReport,
-  SelectivityResult,
-} from "@/app/lib/types";
-import { AlertCircle, ArrowLeft } from "lucide-react";
-import { getSessionResult } from "@/app/lib/api";
+import { ConfidenceBanner } from "@/app/components/analysis/ConfidenceBanner";
+import { PocketGeometryAnalysis } from "@/app/components/analysis/PocketGeometryAnalysis";
+import { MDValidation } from "@/app/components/analysis/MDValidation";
+import { SynthesisRoute } from "@/app/components/analysis/SynthesisRoute";
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -52,7 +56,7 @@ export default function AnalysisPage({ params }: PageProps) {
   const completedAgents = events.filter(
     (e) => e.event === "agent_complete",
   ).length;
-  const progress = Math.min(95, (completedAgents / 18) * 100);
+  const progress = Math.min(95, (completedAgents / 22) * 100);
   const currentAgent = [...events]
     .reverse()
     .find((e) => e.event === "agent_start")?.agent;
@@ -75,8 +79,6 @@ export default function AnalysisPage({ params }: PageProps) {
       className="min-h-screen flex flex-col"
       style={{ background: "var(--background)", color: "var(--foreground)" }}
     >
-      <Header />
-
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Top bar */}
         <div className="flex items-center justify-between mb-6">
@@ -170,6 +172,22 @@ export default function AnalysisPage({ params }: PageProps) {
             {/* Results */}
             {isComplete && result && report && (
               <>
+                {/* Confidence Banner */}
+                {(result as any).confidence_banner && (
+                  <div className="mb-6">
+                    <ConfidenceBanner
+                      tier={(result as any).confidence_banner?.tier || "WELL_KNOWN"}
+                      plddt={(result as any).confidence_banner?.plddt}
+                      esm1vScore={(result as any).esm1v_score}
+                      esm1vLabel={(result as any).esm1v_confidence}
+                      disclaimer={
+                        (result as any).confidence_banner?.disclaimer ||
+                        "All outputs are computational predictions only. Experimental synthesis and binding validation required."
+                      }
+                    />
+                  </div>
+                )}
+
                 {/* Summary */}
                 {report.summary && (
                   <div className="mb-6 p-4 rounded-xl border border-[var(--border)] bg-[var(--card)]">
@@ -185,12 +203,15 @@ export default function AnalysisPage({ params }: PageProps) {
                   </div>
                 )}
 
-                <Tabs defaultValue="leads">
+                <Tabs defaultValue="leads" className="w-full">
                   <TabsList className="mb-4 flex-wrap h-auto gap-1">
                     <TabsTrigger value="leads">Top Leads</TabsTrigger>
+                    <TabsTrigger value="pocket">Pocket Geometry</TabsTrigger>
                     <TabsTrigger value="selectivity">Selectivity</TabsTrigger>
                     <TabsTrigger value="evolution">Evolution Tree</TabsTrigger>
                     <TabsTrigger value="admet">ADMET</TabsTrigger>
+                    <TabsTrigger value="md">Molecular Dynamics</TabsTrigger>
+                    <TabsTrigger value="synthesis">Synthesis</TabsTrigger>
                     <TabsTrigger value="docking">Docking</TabsTrigger>
                     <TabsTrigger value="trials">Clinical Trials</TabsTrigger>
                     <TabsTrigger value="graph">Knowledge Graph</TabsTrigger>
@@ -202,7 +223,7 @@ export default function AnalysisPage({ params }: PageProps) {
                   {/* Top Leads */}
                   <TabsContent value="leads">
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {report.ranked_leads.slice(0, 5).map((lead) => (
+                      {report.ranked_leads.slice(0, 5).map((lead: any) => (
                         <MoleculeCard
                           key={lead.smiles}
                           lead={lead}
@@ -216,6 +237,19 @@ export default function AnalysisPage({ params }: PageProps) {
                         No leads generated.
                       </p>
                     )}
+                  </TabsContent>
+
+                  {/* Pocket Geometry */}
+                  <TabsContent value="pocket">
+                    <PocketGeometryAnalysis
+                      volumeDelta={(result as any).pocket_delta?.volume_delta}
+                      hydrophobicityDelta={
+                        (result as any).pocket_delta?.hydrophobicity_score_delta
+                      }
+                      polarityDelta={(result as any).pocket_delta?.polarity_score_delta}
+                      chargeDelta={(result as any).pocket_delta?.charge_score_delta}
+                      pocketReshaped={(result as any).pocket_delta?.pocket_reshaped}
+                    />
                   </TabsContent>
 
                   {/* Selectivity */}
@@ -251,22 +285,22 @@ export default function AnalysisPage({ params }: PageProps) {
                             </tr>
                           </thead>
                           <tbody>
-                            {selectivity.map((s, i) => (
+                            {selectivity.map((s) => (
                               <tr
-                                key={i}
+                                key={`${s.smiles}-${s.off_target_pdb}`}
                                 className="border-t border-[var(--border)] hover:bg-[var(--muted)]/30"
                               >
                                 <td className="p-3 font-mono text-xs max-w-32 truncate">
                                   {s.smiles.slice(0, 20)}…
                                 </td>
                                 <td className="p-3 text-emerald-600">
-                                  {s.target_affinity.toFixed(2)}
+                                  {s.target_affinity != null ? s.target_affinity.toFixed(2) : "N/A"}
                                 </td>
                                 <td className="p-3 text-red-500">
-                                  {s.off_target_affinity.toFixed(2)}
+                                  {s.off_target_affinity != null ? s.off_target_affinity.toFixed(2) : "N/A"}
                                 </td>
                                 <td className="p-3 font-bold">
-                                  {s.selectivity_ratio.toFixed(2)}×
+                                  {s.selectivity_ratio != null ? s.selectivity_ratio.toFixed(2) : "N/A"}×
                                 </td>
                                 <td className="p-3">
                                   <span
@@ -336,6 +370,46 @@ export default function AnalysisPage({ params }: PageProps) {
                         />
                       </div>
                     </div>
+                  </TabsContent>
+
+                  {/* Molecular Dynamics */}
+                  <TabsContent value="md">
+                    {(result as any).md_results && (result as any).md_results.length > 0 ? (
+                      <div className="space-y-4">
+                        {(result as any).md_results.map((md: any) => (
+                          <MDValidation
+                            key={md.smiles}
+                            rmsdStable={md.rmsd_stable}
+                            rmsdMean={md.rmsd_mean}
+                            stabilityLabel={md.stability_label}
+                            mmgbsaDg={md.mmgbsa_dg}
+                            rmsdTrajectory={md.rmsd_trajectory}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-[var(--muted-foreground)] p-4">
+                        MD simulations not yet available or in progress.
+                      </p>
+                    )}
+                  </TabsContent>
+
+                  {/* Synthesis */}
+                  <TabsContent value="synthesis">
+                    {report.ranked_leads.slice(0, 3).map((lead: any) => (
+                      <div key={lead.smiles} className="mb-6">
+                        <h4 className="font-semibold text-sm mb-4 flex items-center gap-2">
+                          {lead.compound_name || `Candidate #${lead.rank}`}
+                          <Badge variant="secondary">{lead.rank}</Badge>
+                        </h4>
+                        <SynthesisRoute
+                          numSteps={lead.synthesis_steps}
+                          saScore={lead.sa_score}
+                          estimatedCost={lead.synthesis_cost}
+                          synthesizable={lead.synthesis_steps ? lead.synthesis_steps <= 6 : undefined}
+                        />
+                      </div>
+                    ))}
                   </TabsContent>
 
                   {/* Docking */}
@@ -411,7 +485,7 @@ export default function AnalysisPage({ params }: PageProps) {
                           No literature retrieved.
                         </p>
                       )}
-                      {(result.literature ?? []).map((paper) => (
+                      {(result.literature ?? []).map((paper: any) => (
                         <div
                           key={paper.pubmed_id}
                           className="p-4 rounded-lg border border-[var(--border)] bg-[var(--card)]"
@@ -430,13 +504,13 @@ export default function AnalysisPage({ params }: PageProps) {
                           </div>
                         </div>
                       ))}
+                      <SimilarityPanel
+                        similarMolecules={
+                          (result as unknown as Record<string, unknown>)
+                            .similar_molecules as string[] | undefined
+                        }
+                      />
                     </div>
-                    <SimilarityPanel
-                      similarMolecules={
-                        (result as unknown as Record<string, unknown>)
-                          .similar_molecules as string[] | undefined
-                      }
-                    />
                   </TabsContent>
 
                   {/* Export */}
@@ -467,8 +541,6 @@ export default function AnalysisPage({ params }: PageProps) {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

@@ -1,26 +1,51 @@
 "use client";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { applyTheme, exportTheme, importThemeFromJSON, AMBER_MINIMAL } from "@/app/lib/theme";
+import {
+  applyTheme,
+  exportTheme,
+  importThemeFromJSON,
+  AMBER_MINIMAL,
+} from "@/app/lib/theme";
 import type { ThemeTokens } from "@/app/lib/types";
 import { saveTheme } from "@/app/lib/api";
 
 const CSS_VARS = [
-  "background",
-  "foreground",
-  "primary",
-  "primary-foreground",
-  "secondary",
-  "secondary-foreground",
   "accent",
   "accent-foreground",
-  "muted",
-  "muted-foreground",
+  "background",
   "border",
   "card",
   "card-foreground",
   "destructive",
   "destructive-foreground",
+  "foreground",
+  "input",
+  "muted",
+  "muted-foreground",
+  "popover",
+  "popover-foreground",
+  "primary",
+  "primary-foreground",
+  "ring-3",
+  "secondary",
+  "secondary-foreground",
+  "sidebar-accent",
+  "sidebar-accent-foreground",
+  "sidebar-background",
+  "sidebar-border",
+  "sidebar-foreground",
+  "sidebar-primary",
+  "sidebar-primary-foreground",
+  "sidebar-ring",
+  "header-accent",
+  "header-accent-foreground",
+  "header-background",
+  "header-border",
+  "header-foreground",
+  "header-primary",
+  "header-primary-foreground",
+  "header-ring",
 ];
 
 export function ThemeCustomizer() {
@@ -35,7 +60,10 @@ export function ThemeCustomizer() {
   }, []);
 
   const updateColor = (key: string, val: string) => {
-    const next: ThemeTokens = { ...theme, colors: { ...theme.colors, [key]: val } };
+    const next: ThemeTokens = {
+      ...theme,
+      colors: { ...theme.colors, [key]: val },
+    };
     setTheme(next);
     applyTheme(next);
   };
@@ -66,28 +94,28 @@ export function ThemeCustomizer() {
   };
 
   return (
-    <div className="space-y-6 p-6 rounded-xl border border-[var(--border)] bg-[var(--card)]">
+    <div className="space-y-6 rounded-xl border border-border bg-card p-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="font-semibold">Theme Customizer</h3>
         <div className="flex gap-2 flex-wrap">
           <button
             type="button"
             onClick={handleReset}
-            className="px-3 py-1 text-xs rounded border border-[var(--border)] hover:bg-[var(--muted)] transition-colors"
+            className="rounded border border-border px-3 py-1 text-xs transition-colors hover:bg-muted"
           >
             Reset
           </button>
           <button
             type="button"
             onClick={() => exportTheme(theme)}
-            className="px-3 py-1 text-xs rounded border border-[var(--border)] hover:bg-[var(--muted)] transition-colors"
+            className="rounded border border-border px-3 py-1 text-xs transition-colors hover:bg-muted"
           >
             Export JSON
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="px-3 py-1 text-xs rounded bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 transition-opacity"
+            className="rounded bg-primary px-3 py-1 text-xs text-primary-foreground transition-opacity hover:opacity-90"
           >
             Save Theme
           </button>
@@ -104,23 +132,26 @@ export function ThemeCustomizer() {
               className="w-8 h-8 rounded cursor-pointer border-0 shrink-0"
               title={v}
             />
-            <span className="text-xs text-[var(--muted-foreground)] truncate">{v}</span>
+            <span className="truncate text-xs text-muted-foreground">{v}</span>
           </div>
         ))}
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">Paste Theme JSON</label>
+        <label htmlFor="theme-json" className="text-sm font-medium">
+          Paste Theme JSON
+        </label>
         <textarea
+          id="theme-json"
           value={jsonInput}
           onChange={(e) => setJsonInput(e.target.value)}
-          className="w-full h-24 p-2 text-xs font-mono rounded border border-[var(--border)] bg-[var(--background)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+          className="h-24 w-full resize-none rounded border border-border bg-background p-2 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-ring"
           placeholder='{"name": "My Theme", "colors": {"primary": "#..."}}'
         />
         <button
           type="button"
           onClick={handleApplyJSON}
-          className="px-3 py-1 text-xs rounded bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 transition-opacity"
+          className="rounded bg-primary px-3 py-1 text-xs text-primary-foreground transition-opacity hover:opacity-90"
         >
           Apply JSON
         </button>

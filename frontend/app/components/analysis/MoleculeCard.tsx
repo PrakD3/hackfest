@@ -7,10 +7,20 @@ import { MoleculeViewer2D } from "./MoleculeViewer2D";
 import { MoleculeViewer3D } from "./MoleculeViewer3D";
 import { Switch } from "@/app/components/ui/switch";
 import { Badge } from "@/app/components/ui/badge";
-import { AlertTriangle, ShieldCheck, ShieldX } from "lucide-react";
+import { AlertTriangle, ShieldCheck, ShieldX, Zap } from "lucide-react";
 
 interface Props {
-  lead: RankedLead;
+  lead: RankedLead & {
+    gnn_dg?: number;
+    gnn_uncertainty?: number;
+    rmsd_mean?: number;
+    stability_label?: "STABLE" | "BORDERLINE" | "UNSTABLE";
+    mmgbsa_dg?: number;
+    sa_score?: number;
+    sa_label?: string;
+    synthesis_steps?: number;
+    synthesis_cost?: string;
+  };
   rank: number;
   pdbId?: string;
 }
@@ -18,29 +28,55 @@ interface Props {
 export function MoleculeCard({ lead, rank, pdbId }: Props) {
   const [show3D, setShow3D] = useState(false);
 
+  const gnnScore = lead.gnn_dg ?? lead.docking_score;
   const scoreColor =
-    lead.docking_score !== null && lead.docking_score <= -9
+    gnnScore !== null && gnnScore <= -9
       ? "#059669"
-      : lead.docking_score !== null && lead.docking_score <= -7
+      : gnnScore !== null && gnnScore <= -7
         ? "#d97706"
         : "#dc2626";
 
+  const getStabilityColor = (label?: string): string => {
+    if (label === "STABLE") return "#059669";
+    if (label === "BORDERLINE") return "#d97706";
+    return "#dc2626";
+  };
+
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 space-y-3">
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 space-y-4">
+      {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div>
           <span className="text-xs text-[var(--muted-foreground)]">Rank #{rank}</span>
           <h4 className="font-semibold text-sm mt-0.5">{lead.compound_name}</h4>
         </div>
-        <div className="flex items-center gap-2">
-          {lead.docking_score !== null && (
-            <span className="text-sm font-bold" style={{ color: scoreColor }}>
-              {lead.docking_score.toFixed(2)} kcal/mol
-            </span>
-          )}
-        </div>
+        <Badge variant="secondary" className="shrink-0">
+          #{rank}
+        </Badge>
       </div>
 
+      {/* Binding Affinity Scores */}
+      <div className="space-y-2 p-3 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
+        {lead.gnn_dg !== undefined && (
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-[var(--muted-foreground)]">GNN ΔG</span>
+            <span className="font-mono font-bold" style={{ color: scoreColor }}>
+              {lead.gnn_dg.toFixed(1)} {lead.gnn_uncertainty ? `± ${lead.gnn_uncertainty.toFixed(1)}` : ""}{" "}
+              kcal/mol
+            </span>
+          </div>
+        )}
+        {lead.mmgbsa_dg !== undefined && (
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-[var(--muted-foreground)]">MM-GBSA ΔG</span>
+            <span className="font-mono font-bold text-blue-600">
+              {lead.mmgbsa_dg.toFixed(1)} ± 0.5 kcal/mol
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* 2D/3D Viewer */}
       <AnimatePresence mode="wait">
         {!show3D ? (
           <motion.div
@@ -52,7 +88,7 @@ export function MoleculeCard({ lead, rank, pdbId }: Props) {
             <MoleculeViewer2D
               molImageB64={lead.mol_image_b64}
               smiles={lead.smiles}
-              className="h-36"
+              className="h-32 rounded-lg"
             />
           </motion.div>
         ) : (
@@ -62,7 +98,7 @@ export function MoleculeCard({ lead, rank, pdbId }: Props) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <MoleculeViewer3D pdbId={pdbId} className="h-36" />
+            <MoleculeViewer3D pdbId={pdbId} className="h-32 rounded-lg" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -74,6 +110,38 @@ export function MoleculeCard({ lead, rank, pdbId }: Props) {
         </span>
       </div>
 
+      {/* Stability & Properties */}
+      <div className="space-y-2">
+        {lead.stability_label && (
+          <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
+            <span className="text-[var(--muted-foreground)]">MD Stability</span>
+            <Badge
+              variant={
+                lead.stability_label === "STABLE"
+                  ? "success"
+                  : lead.stability_label === "BORDERLINE"
+                    ? "warning"
+                    : "destructive"
+              }
+            >
+              {lead.stability_label}
+              {lead.rmsd_mean && ` (${lead.rmsd_mean.toFixed(2)} Å)`}
+            </Badge>
+          </div>
+        )}
+
+        {lead.sa_score !== undefined && (
+          <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
+            <span className="text-[var(--muted-foreground)]">Synthesis</span>
+            <span className="font-mono font-bold">
+              SA {lead.sa_score.toFixed(1)} • {lead.synthesis_steps ? `${lead.synthesis_steps} steps` : "N/A"}
+              {lead.synthesis_cost && ` • ${lead.synthesis_cost}`}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Safety & Selectivity Badges */}
       <div className="flex flex-wrap gap-1.5 items-center">
         <SelectivityBadge
           ratio={lead.selectivity_ratio}
@@ -91,22 +159,29 @@ export function MoleculeCard({ lead, rank, pdbId }: Props) {
             ADMET ✗
           </Badge>
         )}
-        {lead.resistance_flag && <Badge variant="warning">Resistance Risk</Badge>}
+        {lead.resistance_flag && (
+          <Badge variant="warning">
+            <Zap size={10} className="mr-1" />
+            Resistance Risk
+          </Badge>
+        )}
         {lead.toxicophore_highlight_b64 && (
-          <span className="text-xs text-amber-600 flex items-center gap-1">
-            <AlertTriangle size={10} />
+          <Badge variant="secondary">
+            <AlertTriangle size={10} className="mr-1" />
             PAINS
-          </span>
+          </Badge>
         )}
       </div>
 
+      {/* Clinical Info */}
       {lead.clinical_trials_count > 0 && (
-        <p className="text-xs text-[var(--muted-foreground)]">
-          🏥 {lead.clinical_trials_count} matching clinical trials
+        <p className="text-xs text-[var(--muted-foreground)] p-2 rounded-lg bg-blue-500/10 border border-blue-500/30">
+          🏥 {lead.clinical_trials_count} active clinical trials
         </p>
       )}
 
-      <p className="text-xs font-mono text-[var(--muted-foreground)] truncate">
+      {/* SMILES */}
+      <p className="text-xs font-mono text-[var(--muted-foreground)] truncate border-t border-[var(--border)]/50 pt-3">
         {lead.smiles}
       </p>
     </div>

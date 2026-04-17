@@ -4,10 +4,33 @@ import { CheckCircle, Circle, AlertCircle, Loader2 } from "lucide-react";
 import type { AgentEvent } from "@/app/lib/types";
 
 const AGENTS = [
-  "MutationParser", "Planner", "Fetch", "StructurePrep", "PocketDetection",
-  "MoleculeGeneration", "Docking", "Selectivity", "ADMET", "LeadOptimization",
-  "Resistance", "Similarity", "Synergy", "ClinicalTrial", "KnowledgeGraph",
-  "Explainability", "Report",
+  // Stage 1: Data Acquisition
+  "MutationParser",
+  "Planner",
+  "Fetch (PubMed/UniProt/PDB/PubChem)",
+  // Stage 2-3: Structure & Variant Analysis
+  "StructurePrep",
+  "VariantEffect",
+  // Stage 4-5: Pocket & Molecule Design
+  "PocketDetection",
+  "MoleculeGeneration",
+  // Stage 6-9: Docking & Safety
+  "Docking",
+  "Selectivity",
+  "ADMET",
+  "LeadOptimization",
+  // Stage 10-11: Ranking & Validation
+  "GNNAffinity",
+  "MDValidation",
+  // Stage 12-14: Context Analysis
+  "Resistance",
+  "Similarity",
+  "Synergy",
+  // Stage 15-16: Output Generation
+  "ClinicalTrial",
+  "Synthesis",
+  "Explainability",
+  "Report",
 ];
 
 type AgentStatus = "running" | "complete" | "error" | "waiting";

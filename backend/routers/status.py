@@ -16,7 +16,6 @@ async def health():
 async def system_status():
     status = get_system_status()
     api_keys = {
-        "openai": bool(__import__("os").getenv("OPENAI_API_KEY")),
         "groq": bool(__import__("os").getenv("GROQ_API_KEY")),
         "together": bool(__import__("os").getenv("TOGETHER_API_KEY")),
         "ncbi": bool(__import__("os").getenv("NCBI_API_KEY")),
