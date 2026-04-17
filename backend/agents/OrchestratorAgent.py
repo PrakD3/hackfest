@@ -5,17 +5,10 @@ import os
 import time
 import uuid
 from typing import AsyncIterator
-import pathlib
 
-# Load .env variables early - with explicit path to backend/.env
-env_path = pathlib.Path(__file__).parent.parent / ".env"
-print(f"[DEBUG] Looking for .env at: {env_path} (exists: {env_path.exists()})")
-if env_path.exists():
-    from dotenv import load_dotenv
-    load_dotenv(env_path)
-    print(f"[DEBUG] .env loaded successfully from {env_path}")
-else:
-    print(f"[DEBUG] .env NOT found at {env_path}")
+# Load .env variables early
+from dotenv import load_dotenv
+load_dotenv()
 
 os.environ.setdefault("LANGCHAIN_TRACING_V2", os.getenv("LANGCHAIN_TRACING_V2", "false"))
 os.environ.setdefault(
@@ -28,28 +21,40 @@ os.environ.setdefault(
 
 from pipeline.state import AgentStatus, PipelineMode
 
-
-# In-memory session store (for performance; Redis is used for persistence)
+# In-memory session store
 _sessions: dict[str, dict] = {}
 _sse_queues: dict[str, asyncio.Queue] = {}
 
 AGENT_ORDER = [
-    ("MutationParserAgent", 10),
-    ("PlannerAgent", 15),
-    ("FetchAgent", 25),
-    ("StructurePrepAgent", 33),
-    ("PocketDetectionAgent", 40),
-    ("MoleculeGenerationAgent", 50),
-    ("DockingAgent", 60),
-    ("SelectivityAgent", 68),
-    ("ADMETAgent", 74),
-    ("LeadOptimizationAgent", 80),
-    ("ResistanceAgent", 84),
-    ("SimilaritySearchAgent", 87),
-    ("SynergyAgent", 90),
-    ("ClinicalTrialAgent", 93),
-    ("KnowledgeGraphAgent", 96),
-    ("ExplainabilityAgent", 98),
+    # Stage 1: Data Acquisition
+    ("MutationParserAgent", 5),
+    ("PlannerAgent", 10),
+    ("FetchAgent", 15),
+    
+    # Stage 2-3: Structure & Variant Analysis
+    ("StructurePrepAgent", 25),
+    ("VariantEffectAgent", 30),
+    ("PocketDetectionAgent", 35),
+    
+    # Stage 4-5: Molecule Design & Docking
+    ("MoleculeGenerationAgent", 45),
+    ("DockingAgent", 55),
+    ("SelectivityAgent", 62),
+    ("ADMETAgent", 68),
+    ("LeadOptimizationAgent", 74),
+    
+    # Stage 6-7: Ranking & Validation
+    ("GNNAffinityAgent", 80),
+    ("MDValidationAgent", 90),
+    ("ResistanceAgent", 92),
+    
+    # Stage 8-9: Context Analysis
+    ("SimilaritySearchAgent", 94),
+    ("SynergyAgent", 96),
+    ("ClinicalTrialAgent", 97),
+    
+    # Stage 10: Output
+    ("SynthesisAgent", 99),
     ("ReportAgent", 100),
 ]
 
@@ -137,9 +142,6 @@ class OrchestratorAgent:
                 traceback.print_exc()
 
         _sessions[session_id] = state
-        
-        # Persist session to Redis for durability across restarts
-
         await queue.put(
             {
                 "event": "pipeline_complete",
