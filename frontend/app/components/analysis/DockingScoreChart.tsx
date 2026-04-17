@@ -1,5 +1,7 @@
 "use client";
+import { useEffect, useState } from "react";
 import type { DockingResult } from "@/app/lib/types";
+import { getCSSVariableValue } from "@/app/lib/theme";
 import {
   BarChart,
   Bar,
@@ -15,6 +17,17 @@ interface Props {
 }
 
 export function DockingScoreChart({ results }: Props) {
+  const [barColors, setBarColors] = useState<string[]>([]);
+
+  useEffect(() => {
+    const stableColor = getCSSVariableValue("stability-stable", "#10b981");
+    const borderlineColor = getCSSVariableValue("stability-borderline", "#f59e0b");
+    const colors = results.slice(0, 10).map((r) =>
+      r.binding_energy <= -9 ? stableColor : r.binding_energy <= -7 ? borderlineColor : borderlineColor
+    );
+    setBarColors(colors);
+  }, [results]);
+
   if (!results.length) {
     return (
       <div className="text-sm text-[var(--muted-foreground)] p-4">
@@ -49,17 +62,8 @@ export function DockingScoreChart({ results }: Props) {
           ]}
         />
         <Bar dataKey="score" radius={[0, 4, 4, 0]}>
-          {data.map((d, i) => (
-            <Cell
-              key={i}
-              fill={
-                d.score <= -9
-                  ? "#059669"
-                  : d.score <= -7
-                    ? "#d97706"
-                    : "#f59e0b"
-              }
-            />
+          {barColors.map((color, i) => (
+            <Cell key={i} fill={color} />
           ))}
         </Bar>
       </BarChart>

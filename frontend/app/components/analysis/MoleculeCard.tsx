@@ -31,15 +31,15 @@ export function MoleculeCard({ lead, rank, pdbId }: Props) {
   const gnnScore = lead.gnn_dg ?? lead.docking_score;
   const scoreColor =
     gnnScore !== null && gnnScore <= -9
-      ? "#059669"
+      ? "var(--stability-stable)"
       : gnnScore !== null && gnnScore <= -7
-        ? "#d97706"
-        : "#dc2626";
+        ? "var(--stability-borderline)"
+        : "var(--stability-unstable)";
 
   const getStabilityColor = (label?: string): string => {
-    if (label === "STABLE") return "#059669";
-    if (label === "BORDERLINE") return "#d97706";
-    return "#dc2626";
+    if (label === "STABLE") return "var(--stability-stable)";
+    if (label === "BORDERLINE") return "var(--stability-borderline)";
+    return "var(--stability-unstable)";
   };
 
   return (

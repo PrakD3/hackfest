@@ -316,8 +316,8 @@ export default function AnalysisPage({ params }: PageProps) {
                                               : "var(--selectivity-dangerous)",
                                       background:
                                         s.selectivity_label === "High"
-                                          ? "#05966915"
-                                          : "#dc262615",
+                                          ? "color-mix(in srgb, var(--selectivity-high) 10%, transparent)"
+                                          : "color-mix(in srgb, var(--selectivity-dangerous) 10%, transparent)",
                                     }}
                                   >
                                     {s.selectivity_label}

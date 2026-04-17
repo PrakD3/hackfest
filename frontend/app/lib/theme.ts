@@ -41,6 +41,26 @@ export const AMBER_MINIMAL: ThemeTokens = {
     "header-primary": "#fbbf24",
     "header-primary-foreground": "#000000",
     "header-ring": "#fbbf24",
+    // Semantic colors for data visualization
+    "selectivity-high": "#059669",
+    "selectivity-moderate": "#d97706",
+    "selectivity-low": "#f59e0b",
+    "selectivity-dangerous": "#dc2626",
+    "stability-stable": "#10b981",
+    "stability-borderline": "#f59e0b",
+    "stability-unstable": "#ef4444",
+    "affinity-excellent": "#10b981",
+    "affinity-good": "#3b82f6",
+    "affinity-moderate": "#f59e0b",
+    "affinity-poor": "#ef4444",
+    "color-success": "#10b981",
+    "color-success-fg": "#ffffff",
+    "color-warning": "#f59e0b",
+    "color-warning-fg": "#ffffff",
+    "color-danger": "#ef4444",
+    "color-danger-fg": "#ffffff",
+    "color-info": "#3b82f6",
+    "color-info-fg": "#ffffff",
   },
 };
 
@@ -100,4 +120,20 @@ export function getSavedTheme(): ThemeTokens | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Get the current value of a CSS variable from the root element.
+ * Respects custom themes set via ThemeCustomizer.
+ * Falls back to default if variable not found.
+ */
+export function getCSSVariableValue(
+  variableName: string,
+  fallback: string = "#000000"
+): string {
+  if (typeof window === "undefined") return fallback;
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue(`--${variableName}`)
+    .trim();
+  return value || fallback;
 }
