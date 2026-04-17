@@ -1,0 +1,149 @@
+{
+  "egfr_t790m": {
+    "aliases": ["EGFR T790M", "egfr t790m", "t790m"],
+    "type": "mutation",
+    "gene": "EGFR",
+    "mutation": "T790M",
+    "literature": [
+      {"pubmed_id": "18408761", "title": "EGFR T790M mutation in non-small cell lung cancer", "journal": "N Engl J Med", "publication_date": "2008"},
+      {"pubmed_id": "25948645", "title": "Osimertinib in T790M-mutation-positive NSCLC", "journal": "N Engl J Med", "publication_date": "2015"}
+    ],
+    "targets": [
+      {"accession": "P00533", "protein_name": "Epidermal growth factor receptor", "gene_names": ["EGFR"], "organism": "Homo sapiens", "sequence": ""}
+    ],
+    "structures": [
+      {"pdb_id": "4I23", "title": "EGFR T790M mutant structure", "experimental_methods": "X-RAY DIFFRACTION", "resolution": 2.8, "pdb_path": null}
+    ],
+    "known_compounds": [
+      {"name": "Osimertinib", "molecular_formula": "C28H33ClN7O2", "canonical_smiles": "COc1cc2ncnc(Nc3cccc(NC(=O)/C=C/CN(C)C)c3)c2cc1NC(=O)/C=C/CN(C)C", "molecular_weight": 499.97},
+      {"name": "Erlotinib", "molecular_formula": "C22H23NO4", "canonical_smiles": "C#Cc1cccc(Nc2ncnc3cc(OCCOC)c(OCCOC)cc23)c1", "molecular_weight": 393.43}
+    ],
+    "resistance": {"resistant_to": ["Erlotinib", "Gefitinib"], "recommended": ["Osimertinib"]},
+    "explanation_context": "T790M gatekeeper mutation in EGFR, primary resistance mechanism to 1st/2nd gen TKIs"
+  },
+  "hiv_k103n": {
+    "aliases": ["HIV K103N", "hiv k103n", "k103n"],
+    "type": "mutation",
+    "gene": "HIV",
+    "mutation": "K103N",
+    "literature": [
+      {"pubmed_id": "12050489", "title": "K103N mutation and NNRTI resistance", "journal": "J Virol", "publication_date": "2002"}
+    ],
+    "targets": [
+      {"accession": "P03366", "protein_name": "HIV-1 reverse transcriptase", "gene_names": ["pol"], "organism": "HIV-1", "sequence": ""}
+    ],
+    "structures": [
+      {"pdb_id": "1HVR", "title": "HIV-1 RT with inhibitor", "experimental_methods": "X-RAY DIFFRACTION", "resolution": 2.5, "pdb_path": null}
+    ],
+    "known_compounds": [
+      {"name": "Efavirenz", "molecular_formula": "C14H9ClF3NO2", "canonical_smiles": "O=C1O[C@@](C#C)(c2cc(Cl)cc(C(F)(F)F)c2)CN1", "molecular_weight": 315.68},
+      {"name": "Etravirine", "molecular_formula": "C20H15BrN6O", "canonical_smiles": "Cc1nc(N)nc(Nc2ccc(C#N)c(Oc3nc(N)ncc3Br)c2)c1", "molecular_weight": 435.28}
+    ],
+    "resistance": {"resistant_to": ["Efavirenz", "Nevirapine"], "recommended": ["Etravirine", "Rilpivirine"]},
+    "explanation_context": "K103N NNRTI resistance mutation in HIV reverse transcriptase"
+  },
+  "brca1_5382insc": {
+    "aliases": ["BRCA1 5382insC", "brca1 5382insc", "5382insC"],
+    "type": "mutation",
+    "gene": "BRCA1",
+    "mutation": "5382INSC",
+    "literature": [
+      {"pubmed_id": "22585167", "title": "BRCA1 5382insC and PARP inhibitor response", "journal": "Cancer Res", "publication_date": "2012"}
+    ],
+    "targets": [
+      {"accession": "P38398", "protein_name": "Breast cancer type 1 susceptibility protein", "gene_names": ["BRCA1"], "organism": "Homo sapiens", "sequence": ""}
+    ],
+    "structures": [
+      {"pdb_id": "1JM7", "title": "BRCA1 BRCT domain", "experimental_methods": "X-RAY DIFFRACTION", "resolution": 1.85, "pdb_path": null}
+    ],
+    "known_compounds": [
+      {"name": "Olaparib", "molecular_formula": "C24H23FN4O3", "canonical_smiles": "O=C1CCCN1Cc1ccc(C(=O)c2[nH]ncc2C#N)cc1F", "molecular_weight": 434.46}
+    ],
+    "resistance": {"resistant_to": ["Conventional chemotherapy"], "recommended": ["Olaparib", "Niraparib"]},
+    "explanation_context": "BRCA1 5382insC frameshift mutation, synthetic lethality with PARP inhibitors"
+  },
+  "tp53_r248w": {
+    "aliases": ["TP53 R248W", "tp53 r248w", "r248w"],
+    "type": "mutation",
+    "gene": "TP53",
+    "mutation": "R248W",
+    "literature": [
+      {"pubmed_id": "23918804", "title": "TP53 R248W hotspot mutation", "journal": "Nat Genet", "publication_date": "2013"}
+    ],
+    "targets": [
+      {"accession": "P04637", "protein_name": "Cellular tumor antigen p53", "gene_names": ["TP53"], "organism": "Homo sapiens", "sequence": ""}
+    ],
+    "structures": [
+      {"pdb_id": "2OCJ", "title": "p53 core domain with R248W mutation", "experimental_methods": "X-RAY DIFFRACTION", "resolution": 2.05, "pdb_path": null}
+    ],
+    "known_compounds": [
+      {"name": "APR-246", "molecular_formula": "C7H13NO2", "canonical_smiles": "O=C1OCC(N1)CC", "molecular_weight": 143.18}
+    ],
+    "resistance": {"resistant_to": ["Many chemotherapies"], "recommended": ["APR-246", "MDM2 inhibitors"]},
+    "explanation_context": "TP53 R248W DNA-contact hotspot mutation, gain-of-function oncogene"
+  },
+  "hiv": {
+    "aliases": ["HIV", "hiv", "HIV protease"],
+    "type": "disease",
+    "gene": "HIV",
+    "mutation": "",
+    "literature": [],
+    "targets": [
+      {"accession": "P03366", "protein_name": "HIV-1 protease", "gene_names": ["gag-pol"], "organism": "HIV-1", "sequence": ""}
+    ],
+    "structures": [
+      {"pdb_id": "1HVR", "title": "HIV-1 protease", "experimental_methods": "X-RAY DIFFRACTION", "resolution": 2.0, "pdb_path": null}
+    ],
+    "known_compounds": [],
+    "resistance": {},
+    "explanation_context": "HIV general query"
+  },
+  "brca1": {
+    "aliases": ["BRCA1", "brca1", "breast cancer"],
+    "type": "gene",
+    "gene": "BRCA1",
+    "mutation": "",
+    "literature": [],
+    "targets": [
+      {"accession": "P38398", "protein_name": "BRCA1", "gene_names": ["BRCA1"], "organism": "Homo sapiens", "sequence": ""}
+    ],
+    "structures": [
+      {"pdb_id": "1JM7", "title": "BRCA1 BRCT", "experimental_methods": "X-RAY DIFFRACTION", "resolution": 1.85, "pdb_path": null}
+    ],
+    "known_compounds": [],
+    "resistance": {},
+    "explanation_context": "BRCA1 general query"
+  },
+  "egfr_l858r": {
+    "aliases": ["EGFR L858R", "egfr l858r", "l858r"],
+    "type": "mutation",
+    "gene": "EGFR",
+    "mutation": "L858R",
+    "literature": [],
+    "targets": [
+      {"accession": "P00533", "protein_name": "EGFR", "gene_names": ["EGFR"], "organism": "Homo sapiens", "sequence": ""}
+    ],
+    "structures": [
+      {"pdb_id": "4ZAU", "title": "EGFR L858R", "experimental_methods": "X-RAY DIFFRACTION", "resolution": 2.0, "pdb_path": null}
+    ],
+    "known_compounds": [],
+    "resistance": {"resistant_to": [], "recommended": ["Erlotinib", "Gefitinib", "Osimertinib"]},
+    "explanation_context": "EGFR L858R activating mutation"
+  },
+  "hiv_m184v": {
+    "aliases": ["HIV M184V", "hiv m184v", "m184v"],
+    "type": "mutation",
+    "gene": "HIV",
+    "mutation": "M184V",
+    "literature": [],
+    "targets": [
+      {"accession": "P03366", "protein_name": "HIV-1 RT", "gene_names": ["pol"], "organism": "HIV-1", "sequence": ""}
+    ],
+    "structures": [
+      {"pdb_id": "1HVR", "title": "HIV-1 RT", "experimental_methods": "X-RAY DIFFRACTION", "resolution": 2.5, "pdb_path": null}
+    ],
+    "known_compounds": [],
+    "resistance": {"resistant_to": ["Lamivudine", "Emtricitabine"], "recommended": ["Tenofovir", "Zidovudine"]},
+    "explanation_context": "HIV M184V NRTI resistance mutation"
+  }
+}

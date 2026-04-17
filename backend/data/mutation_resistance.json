@@ -1,0 +1,38 @@
+{
+  "EGFR T790M": {
+    "resistant_to": ["Erlotinib", "Gefitinib", "Afatinib"],
+    "recommended": ["Osimertinib", "Rociletinib"],
+    "reason": "T790M gatekeeper mutation sterically blocks first-generation EGFR inhibitors",
+    "mechanism": "Steric clash at ATP binding site"
+  },
+  "EGFR L858R": {
+    "resistant_to": ["Chemotherapy"],
+    "recommended": ["Erlotinib", "Gefitinib", "Osimertinib"],
+    "reason": "L858R activating mutation sensitizes EGFR to TKI therapy",
+    "mechanism": "Increased kinase activity"
+  },
+  "HIV K103N": {
+    "resistant_to": ["Efavirenz", "Nevirapine"],
+    "recommended": ["Etravirine", "Rilpivirine", "Tenofovir"],
+    "reason": "K103N prevents NNRTI binding by removing key hydrogen bond",
+    "mechanism": "Loss of H-bond to K103 backbone"
+  },
+  "HIV M184V": {
+    "resistant_to": ["Lamivudine", "Emtricitabine"],
+    "recommended": ["Tenofovir", "Zidovudine", "Abacavir"],
+    "reason": "M184V causes steric clash with 3TC/FTC oxathiolane ring",
+    "mechanism": "Steric exclusion of L-nucleosides"
+  },
+  "BRCA1 5382INSC": {
+    "resistant_to": ["Conventional chemotherapy"],
+    "recommended": ["Olaparib", "Niraparib", "Rucaparib"],
+    "reason": "BRCA1 frameshift creates PARP inhibitor synthetic lethality",
+    "mechanism": "Loss of homologous recombination"
+  },
+  "TP53 R248W": {
+    "resistant_to": ["Many chemotherapies"],
+    "recommended": ["APR-246 (Eprenetapopt)", "MDM2 inhibitors"],
+    "reason": "R248W hot-spot mutation abrogates DNA binding",
+    "mechanism": "Loss of contact with DNA minor groove"
+  }
+}

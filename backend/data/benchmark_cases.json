@@ -1,0 +1,12 @@
+[
+  {"query": "EGFR T790M", "expected_gene": "EGFR", "expected_mutation": "T790M", "min_leads": 1},
+  {"query": "HIV K103N", "expected_gene": "HIV", "expected_mutation": "K103N", "min_leads": 1},
+  {"query": "HIV M184V", "expected_gene": "HIV", "expected_mutation": "M184V", "min_leads": 1},
+  {"query": "BRCA1 5382insC", "expected_gene": "BRCA1", "expected_mutation": "5382insC", "min_leads": 1},
+  {"query": "TP53 R248W", "expected_gene": "TP53", "expected_mutation": "R248W", "min_leads": 1},
+  {"query": "EGFR L858R", "expected_gene": "EGFR", "expected_mutation": "L858R", "min_leads": 1},
+  {"query": "BCR-ABL T315I", "expected_gene": "BCR-ABL", "expected_mutation": "T315I", "min_leads": 1},
+  {"query": "KRAS G12D", "expected_gene": "KRAS", "expected_mutation": "G12D", "min_leads": 1},
+  {"query": "BRAF V600E", "expected_gene": "BRAF", "expected_mutation": "V600E", "min_leads": 1},
+  {"query": "ALK F1174L", "expected_gene": "ALK", "expected_mutation": "F1174L", "min_leads": 1}
+]
