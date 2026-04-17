@@ -17,7 +17,19 @@ log = get_logger("system_check")
 
 
 def check_vina() -> bool:
-    return shutil.which("vina") is not None
+    # Check system PATH
+    if shutil.which("vina") is not None:
+        return True
+    # Check PyRx installation (Windows)
+    import os
+    pyrx_paths = [
+        r"C:\Program Files (x86)\PyRx\vina.exe",
+        r"C:\Program Files\PyRx\vina.exe",
+    ]
+    for path in pyrx_paths:
+        if os.path.exists(path):
+            return True
+    return False
 
 
 def check_gnina() -> bool:
