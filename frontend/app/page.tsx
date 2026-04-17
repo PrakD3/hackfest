@@ -57,9 +57,7 @@ export default function HomePage() {
         delay: 0.65,
       });
 
-      const sections = containerRef.current?.querySelectorAll<HTMLElement>(
-        "section.card-section",
-      );
+      const sections = containerRef.current?.querySelectorAll<HTMLElement>("section.card-section");
       if (sections?.length) {
         sections.forEach((section, index) => {
           gsap.fromTo(
@@ -75,7 +73,7 @@ export default function HomePage() {
                 end: "top top",
                 scrub: true,
               },
-            },
+            }
           );
 
           if (index < sections.length - 1) {
@@ -95,8 +93,7 @@ export default function HomePage() {
 
       if (outer && track && RESEARCH_PANELS.length > 0) {
         const getViewportWidth = () => outer.clientWidth;
-        const getTotalScroll = () =>
-          Math.max(0, track.scrollWidth - getViewportWidth());
+        const getTotalScroll = () => Math.max(0, track.scrollWidth - getViewportWidth());
 
         const horizontalTween = gsap.to(track, {
           x: () => -getTotalScroll(),
@@ -134,7 +131,7 @@ export default function HomePage() {
         horizontalTween.scrollTrigger?.refresh();
       }
     },
-    { scope: containerRef },
+    { scope: containerRef }
   );
 
   useEffect(() => {
@@ -169,8 +166,7 @@ export default function HomePage() {
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              backgroundImage:
-                "radial-gradient(circle, var(--border) 1px, transparent 1px)",
+              backgroundImage: "radial-gradient(circle, var(--border) 1px, transparent 1px)",
               backgroundSize: "30px 30px",
               opacity: 0.45,
             }}
@@ -178,8 +174,7 @@ export default function HomePage() {
           <div
             className="absolute top-[-120px] right-[-60px] w-[420px] h-[420px] rounded-full pointer-events-none"
             style={{
-              background:
-                "radial-gradient(circle, rgba(251,191,36,0.2) 0%, transparent 70%)",
+              background: "radial-gradient(circle, rgba(251,191,36,0.2) 0%, transparent 70%)",
               filter: "blur(40px)",
             }}
           />
@@ -189,17 +184,15 @@ export default function HomePage() {
               Drug Discovery Platform
             </p>
             <h1 className="text-5xl md:text-7xl font-bold leading-[1.02] mb-6">
-              {["From Mutation", "To Lead Compound", "In One Pipeline"].map(
-                (line) => (
-                  <span key={line} className="hero-word block">
-                    {line}
-                  </span>
-                ),
-              )}
+              {["From Mutation", "To Lead Compound", "In One Pipeline"].map((line) => (
+                <span key={line} className="hero-word block">
+                  {line}
+                </span>
+              ))}
             </h1>
             <p className="hero-sub text-base md:text-lg text-muted-foreground max-w-3xl mx-auto mb-8">
-              A stack of specialized AI agents orchestrates target validation,
-              molecule design, safety checks, and evidence synthesis.
+              A stack of specialized AI agents orchestrates target validation, molecule design,
+              safety checks, and evidence synthesis.
             </p>
 
             <div className="hero-cta max-w-2xl mx-auto">
@@ -237,10 +230,9 @@ export default function HomePage() {
             </h2>
             <div className="grid md:grid-cols-2 gap-10 items-start">
               <p className="text-base md:text-lg leading-relaxed text-muted-foreground">
-                Drug Discovery AI is designed for fast hypothesis-to-lead
-                cycles. Each session preserves reasoning, evidence, and ranked
-                candidates so scientists can audit how recommendations were
-                produced.
+                Drug Discovery AI is designed for fast hypothesis-to-lead cycles. Each session
+                preserves reasoning, evidence, and ranked candidates so scientists can audit how
+                recommendations were produced.
               </p>
               <div
                 className="rounded-2xl border p-6 bg-background/70"
@@ -298,9 +290,7 @@ export default function HomePage() {
           </div>
 
           <div className="absolute bottom-8 left-8 md:left-16 flex items-center gap-1.5 text-muted-foreground/40 pointer-events-none select-none">
-            <span className="font-mono text-[10px] tracking-[0.2em] uppercase">
-              Scroll
-            </span>
+            <span className="font-mono text-[10px] tracking-[0.2em] uppercase">Scroll</span>
             <ChevronRight className="h-3 w-3" />
           </div>
 
@@ -313,8 +303,7 @@ export default function HomePage() {
                   className="h-px rounded-full transition-all duration-300"
                   style={{
                     width: i === 0 ? "2rem" : "1rem",
-                    backgroundColor:
-                      i === 0 ? "var(--primary)" : "var(--muted-foreground)",
+                    backgroundColor: i === 0 ? "var(--primary)" : "var(--muted-foreground)",
                     opacity: i === 0 ? 1 : 0.25,
                   }}
                 />

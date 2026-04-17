@@ -1,7 +1,7 @@
 "use client";
+import { CheckCircle, ExternalLink, Loader2, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getSystemStatus } from "@/app/lib/api";
-import { CheckCircle, XCircle, Loader2, ExternalLink } from "lucide-react";
 
 const SERVICES = [
   { key: "groq", label: "Groq", url: "https://console.groq.com/" },
@@ -21,7 +21,7 @@ export function APIKeyChecker() {
 
   useEffect(() => {
     getSystemStatus().then((s) => {
-      setStatus(s?.api_keys || {});
+      setStatus((s?.api_keys as Record<string, unknown>) || {});
       setLoading(false);
     });
   }, []);
@@ -39,10 +39,7 @@ export function APIKeyChecker() {
           >
             <div className="flex items-center gap-2">
               {loading ? (
-                <Loader2
-                  size={14}
-                  className="animate-spin text-muted-foreground"
-                />
+                <Loader2 size={14} className="animate-spin text-muted-foreground" />
               ) : ok ? (
                 <CheckCircle size={14} className="text-emerald-500" />
               ) : (
@@ -50,9 +47,7 @@ export function APIKeyChecker() {
               )}
               <span className="text-sm">{svc.label}</span>
               {!loading && (
-                <span
-                  className={`text-xs font-medium ${ok ? "text-emerald-600" : "text-red-500"}`}
-                >
+                <span className={`text-xs font-medium ${ok ? "text-emerald-600" : "text-red-500"}`}>
                   {ok ? "Connected" : "Not configured"}
                 </span>
               )}

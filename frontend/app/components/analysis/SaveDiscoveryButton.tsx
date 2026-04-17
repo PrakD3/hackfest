@@ -1,8 +1,8 @@
 "use client";
+import { Bookmark, BookmarkCheck, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { saveDiscovery } from "@/app/lib/api";
-import { Bookmark, BookmarkCheck, Loader2 } from "lucide-react";
 
 interface Props {
   sessionId: string;

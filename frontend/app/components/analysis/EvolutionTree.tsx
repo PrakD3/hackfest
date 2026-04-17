@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
-  EvolutionTree as EvolutionTreeType,
-  EvolutionNode,
   EvolutionEdge,
+  EvolutionNode,
+  EvolutionTree as EvolutionTreeType,
 } from "@/app/lib/types";
 
 interface Props {
@@ -48,21 +48,18 @@ export function EvolutionTree({ tree }: Props) {
   const [svgSize, setSvgSize] = useState({ w: 0, h: 0 });
 
   // Group nodes by generation
-  const nodesByGen = (tree?.nodes ?? []).reduce<Record<number, EvolutionNode[]>>(
-    (acc, node) => {
-      const g = node.generation;
-      if (!acc[g]) acc[g] = [];
-      acc[g].push(node);
-      return acc;
-    },
-    {}
-  );
+  const nodesByGen = (tree?.nodes ?? []).reduce<Record<number, EvolutionNode[]>>((acc, node) => {
+    const g = node.generation;
+    if (!acc[g]) acc[g] = [];
+    acc[g].push(node);
+    return acc;
+  }, {});
   const generations = Object.keys(nodesByGen)
     .map(Number)
     .sort((a, b) => a - b);
 
   const recalcPaths = useCallback(() => {
-    if (!containerRef.current || !(tree?.edges?.length)) return;
+    if (!containerRef.current || !tree?.edges?.length) return;
 
     const containerRect = containerRef.current.getBoundingClientRect();
 
@@ -134,10 +131,7 @@ export function EvolutionTree({ tree }: Props) {
   return (
     <div className="overflow-x-auto p-4">
       {/* Scrollable canvas */}
-      <div
-        ref={containerRef}
-        className="relative inline-flex gap-10 items-start min-w-max pb-2"
-      >
+      <div ref={containerRef} className="relative inline-flex gap-10 items-start min-w-max pb-2">
         {/* SVG edge layer */}
         <svg
           className="absolute inset-0 pointer-events-none overflow-visible"
@@ -202,7 +196,7 @@ export function EvolutionTree({ tree }: Props) {
                   background: "var(--card)",
                   borderColor: node.admet_pass
                     ? "color-mix(in srgb, var(--stability-stable) 35%, var(--border))"
-                    : "color-mix(in srgb, var(--stability-unstable) 28%, var(--border))"
+                    : "color-mix(in srgb, var(--stability-unstable) 28%, var(--border))",
                 }}
               >
                 {/* Score + ADMET row */}
@@ -219,8 +213,12 @@ export function EvolutionTree({ tree }: Props) {
                   <span
                     className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
                     style={{
-                      background: node.admet_pass ? "color-mix(in srgb, var(--stability-stable) 10%, transparent)" : "color-mix(in srgb, var(--stability-unstable) 10%, transparent)",
-                      color: node.admet_pass ? "var(--stability-stable)" : "var(--stability-unstable)",
+                      background: node.admet_pass
+                        ? "color-mix(in srgb, var(--stability-stable) 10%, transparent)"
+                        : "color-mix(in srgb, var(--stability-unstable) 10%, transparent)",
+                      color: node.admet_pass
+                        ? "var(--stability-stable)"
+                        : "var(--stability-unstable)",
                     }}
                   >
                     {node.admet_pass ? "ADMET ✓" : "ADMET ✗"}
@@ -232,9 +230,7 @@ export function EvolutionTree({ tree }: Props) {
                   className="font-mono text-[10px] text-[var(--muted-foreground)] truncate"
                   title={node.smiles}
                 >
-                  {node.smiles.length > 28
-                    ? `${node.smiles.slice(0, 28)}…`
-                    : node.smiles}
+                  {node.smiles.length > 28 ? `${node.smiles.slice(0, 28)}…` : node.smiles}
                 </p>
 
                 {/* Method pill */}

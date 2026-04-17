@@ -1,14 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-  applyTheme,
-  exportTheme,
-  importThemeFromJSON,
-  AMBER_MINIMAL,
-} from "@/app/lib/theme";
-import type { ThemeTokens } from "@/app/lib/types";
 import { saveTheme } from "@/app/lib/api";
+import { AMBER_MINIMAL, applyTheme, exportTheme, importThemeFromJSON } from "@/app/lib/theme";
+import type { ThemeTokens } from "@/app/lib/types";
 
 const CSS_VARS = [
   "accent",

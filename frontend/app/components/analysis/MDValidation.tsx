@@ -1,6 +1,14 @@
 "use client";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Badge } from "@/app/components/ui/badge";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface MDValidationProps {
   rmsdStable?: boolean;
@@ -17,7 +25,9 @@ export function MDValidation({
   mmgbsaDg,
   rmsdTrajectory,
 }: MDValidationProps) {
-  const getStabilityColor = (label?: string): "success" | "warning" | "destructive" | "secondary" => {
+  const getStabilityColor = (
+    label?: string
+  ): "success" | "warning" | "destructive" | "secondary" => {
     if (label === "STABLE") return "success";
     if (label === "BORDERLINE") return "warning";
     if (label === "UNSTABLE") return "destructive";
@@ -36,9 +46,7 @@ export function MDValidation({
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">Molecular Dynamics Validation</h3>
         {stabilityLabel && (
-          <Badge variant={getStabilityColor(stabilityLabel)}>
-            {stabilityLabel}
-          </Badge>
+          <Badge variant={getStabilityColor(stabilityLabel)}>{stabilityLabel}</Badge>
         )}
       </div>
 
@@ -61,9 +69,7 @@ export function MDValidation({
 
         {mmgbsaDg !== undefined && (
           <div className="p-4 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
-            <div className="text-xs text-[var(--muted-foreground)] mb-2">
-              MM-GBSA ΔG
-            </div>
+            <div className="text-xs text-[var(--muted-foreground)] mb-2">MM-GBSA ΔG</div>
             <div className="text-2xl font-bold">{mmgbsaDg.toFixed(1)} kcal/mol</div>
             <div className="text-xs text-[var(--muted-foreground)] mt-2">
               ±0.5 kcal/mol (MM-GBSA)

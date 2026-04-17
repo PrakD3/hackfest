@@ -1,6 +1,6 @@
 "use client";
-import { cn } from "@/app/lib/utils";
 import type { SelectHTMLAttributes } from "react";
+import { cn } from "@/app/lib/utils";
 
 const Select = ({ className, children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) => (
   <select

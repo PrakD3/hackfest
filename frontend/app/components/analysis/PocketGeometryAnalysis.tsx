@@ -1,5 +1,5 @@
 "use client";
-import { TrendingUp, AlertCircle } from "lucide-react";
+import { AlertCircle, TrendingUp } from "lucide-react";
 import { Badge } from "@/app/components/ui/badge";
 
 interface PocketGeometryProps {
@@ -41,50 +41,44 @@ export function PocketGeometryAnalysis({
       <div className="grid grid-cols-2 gap-4">
         {volumeDelta !== undefined && (
           <div className="p-3 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
-            <div className="text-xs text-[var(--muted-foreground)] mb-1">
-              Volume Change
-            </div>
+            <div className="text-xs text-[var(--muted-foreground)] mb-1">Volume Change</div>
             <div className="flex items-center gap-2">
               <TrendingUp size={16} className={volumeTrend?.color} />
               <span className="font-semibold">
-                {volumeDelta > 0 ? "+" : ""}{volumeDelta.toFixed(1)} Å³
+                {volumeDelta > 0 ? "+" : ""}
+                {volumeDelta.toFixed(1)} Å³
               </span>
             </div>
-            <div className="text-xs text-[var(--muted-foreground)] mt-1">
-              {volumeTrend?.label}
-            </div>
+            <div className="text-xs text-[var(--muted-foreground)] mt-1">{volumeTrend?.label}</div>
           </div>
         )}
 
         {hydrophobicityDelta !== undefined && (
           <div className="p-3 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
-            <div className="text-xs text-[var(--muted-foreground)] mb-1">
-              Hydrophobicity
-            </div>
+            <div className="text-xs text-[var(--muted-foreground)] mb-1">Hydrophobicity</div>
             <span className="font-semibold">
-              {hydrophobicityDelta > 0 ? "+" : ""}{hydrophobicityDelta.toFixed(2)}
+              {hydrophobicityDelta > 0 ? "+" : ""}
+              {hydrophobicityDelta.toFixed(2)}
             </span>
           </div>
         )}
 
         {polarityDelta !== undefined && (
           <div className="p-3 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
-            <div className="text-xs text-[var(--muted-foreground)] mb-1">
-              Polarity
-            </div>
+            <div className="text-xs text-[var(--muted-foreground)] mb-1">Polarity</div>
             <span className="font-semibold">
-              {polarityDelta > 0 ? "+" : ""}{polarityDelta.toFixed(2)}
+              {polarityDelta > 0 ? "+" : ""}
+              {polarityDelta.toFixed(2)}
             </span>
           </div>
         )}
 
         {chargeDelta !== undefined && (
           <div className="p-3 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
-            <div className="text-xs text-[var(--muted-foreground)] mb-1">
-              Charge
-            </div>
+            <div className="text-xs text-[var(--muted-foreground)] mb-1">Charge</div>
             <span className="font-semibold">
-              {chargeDelta > 0 ? "+" : ""}{chargeDelta.toFixed(2)}
+              {chargeDelta > 0 ? "+" : ""}
+              {chargeDelta.toFixed(2)}
             </span>
           </div>
         )}

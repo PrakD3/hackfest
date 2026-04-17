@@ -127,10 +127,7 @@ export function getSavedTheme(): ThemeTokens | null {
  * Respects custom themes set via ThemeCustomizer.
  * Falls back to default if variable not found.
  */
-export function getCSSVariableValue(
-  variableName: string,
-  fallback: string = "#000000"
-): string {
+export function getCSSVariableValue(variableName: string, fallback: string = "#000000"): string {
   if (typeof window === "undefined") return fallback;
   const value = getComputedStyle(document.documentElement)
     .getPropertyValue(`--${variableName}`)

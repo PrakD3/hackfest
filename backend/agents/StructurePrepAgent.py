@@ -43,7 +43,11 @@ class StructurePrepAgent:
         structures = state.get("structures", [])
         mutation_context = state.get("mutation_context", {})
         session_id = state.get("session_id", "default")
-        tmp_dir = Path(f"/tmp/dda_structures/{session_id}")
+        
+        # Use Windows-compatible temp path
+        import tempfile
+        system_temp = tempfile.gettempdir()  # Returns C:\Users\...\AppData\Local\Temp on Windows
+        tmp_dir = Path(system_temp) / "dda_structures" / session_id
         tmp_dir.mkdir(parents=True, exist_ok=True)
 
         pdb_content = None

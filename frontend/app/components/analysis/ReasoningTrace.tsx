@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { useState } from "react";
 
 interface Props {
   trace: Record<string, string> | null;
@@ -20,10 +20,7 @@ export function ReasoningTrace({ trace }: Props) {
   return (
     <div className="space-y-2">
       {Object.entries(trace).map(([agent, text]) => (
-        <div
-          key={agent}
-          className="border border-[var(--border)] rounded-lg overflow-hidden"
-        >
+        <div key={agent} className="border border-[var(--border)] rounded-lg overflow-hidden">
           <button
             type="button"
             onClick={() => setOpen(open === agent ? null : agent)}

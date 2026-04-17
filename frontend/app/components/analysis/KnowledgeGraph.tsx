@@ -57,7 +57,7 @@ export function KnowledgeGraph({ graph }: Props) {
           d3
             .forceLink<NodeDatum, LinkDatum>(links)
             .id((d) => d.id)
-            .distance(80),
+            .distance(80)
         )
         .force("charge", d3.forceManyBody().strength(-200))
         .force("center", d3.forceCenter(width / 2, height / 2));
@@ -105,7 +105,7 @@ export function KnowledgeGraph({ graph }: Props) {
               if (!event.active) sim.alphaTarget(0);
               d.fx = null;
               d.fy = null;
-            }),
+            })
         );
 
       const label = svg
@@ -129,17 +129,11 @@ export function KnowledgeGraph({ graph }: Props) {
         linkLabel
           .attr(
             "x",
-            (d) =>
-              (((d.source as NodeDatum).x ?? 0) +
-                ((d.target as NodeDatum).x ?? 0)) /
-              2,
+            (d) => (((d.source as NodeDatum).x ?? 0) + ((d.target as NodeDatum).x ?? 0)) / 2
           )
           .attr(
             "y",
-            (d) =>
-              (((d.source as NodeDatum).y ?? 0) +
-                ((d.target as NodeDatum).y ?? 0)) /
-              2,
+            (d) => (((d.source as NodeDatum).y ?? 0) + ((d.target as NodeDatum).y ?? 0)) / 2
           );
 
         node.attr("cx", (d) => d.x ?? 0).attr("cy", (d) => d.y ?? 0);
@@ -164,10 +158,5 @@ export function KnowledgeGraph({ graph }: Props) {
     );
   }
 
-  return (
-    <svg
-      ref={svgRef}
-      className="w-full h-80 rounded border border-[var(--border)]"
-    />
-  );
+  return <svg ref={svgRef} className="w-full h-80 rounded border border-[var(--border)]" />;
 }

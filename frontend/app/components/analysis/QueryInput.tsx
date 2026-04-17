@@ -1,6 +1,6 @@
 "use client";
-import { useState, type FormEvent } from "react";
-import { Search, Loader2, Zap } from "lucide-react";
+import { Loader2, Search, Zap } from "lucide-react";
+import { type FormEvent, useState } from "react";
 
 interface Props {
   onSubmit: (query: string, mode: "full" | "lite") => void;
@@ -45,11 +45,7 @@ export function QueryInput({ onSubmit, loading, defaultQuery = "" }: Props) {
           disabled={loading || !query.trim()}
           className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium hover:bg-[var(--primary)]/90 disabled:opacity-60"
         >
-          {loading ? (
-            <Loader2 size={14} className="animate-spin" />
-          ) : (
-            <Zap size={14} />
-          )}
+          {loading ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
           Analyze
         </button>
       </div>

@@ -18,9 +18,9 @@ export function ResistanceProfile({ forecast, resistanceFlags = [] }: Props) {
     <div className="space-y-3">
       {resistanceFlags.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {resistanceFlags.map((f, i) => (
+          {resistanceFlags.map((f) => (
             <span
-              key={i}
+              key={f}
               className="px-2 py-1 rounded-full bg-red-100 text-red-700 text-xs font-medium"
             >
               ⚠ {f}

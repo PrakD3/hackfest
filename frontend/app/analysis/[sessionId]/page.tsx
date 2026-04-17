@@ -1,44 +1,34 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowLeft } from "lucide-react";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/app/components/ui/tabs";
+import { useRouter } from "next/navigation";
+import { use, useEffect, useRef, useState } from "react";
+import { ADMETPanel } from "@/app/components/analysis/ADMETPanel";
+import { ClinicalTrialPanel } from "@/app/components/analysis/ClinicalTrialPanel";
+import { ConfidenceBanner } from "@/app/components/analysis/ConfidenceBanner";
+import { DockingScoreChart } from "@/app/components/analysis/DockingScoreChart";
+import { EvolutionTree } from "@/app/components/analysis/EvolutionTree";
+import { ExportButton } from "@/app/components/analysis/ExportButton";
+import { KnowledgeGraph } from "@/app/components/analysis/KnowledgeGraph";
+import { LangSmithTrace } from "@/app/components/analysis/LangSmithTrace";
+import { MDValidation } from "@/app/components/analysis/MDValidation";
+import { MoleculeCard } from "@/app/components/analysis/MoleculeCard";
+// Components
+import { PipelineStatus } from "@/app/components/analysis/PipelineStatus";
+import { PocketGeometryAnalysis } from "@/app/components/analysis/PocketGeometryAnalysis";
+import { ReasoningTrace } from "@/app/components/analysis/ReasoningTrace";
+import { ResistanceProfile } from "@/app/components/analysis/ResistanceProfile";
+import { SaveDiscoveryButton } from "@/app/components/analysis/SaveDiscoveryButton";
+import { SimilarityPanel } from "@/app/components/analysis/SimilarityPanel";
+import { SynthesisRoute } from "@/app/components/analysis/SynthesisRoute";
+import { ToxicophorePanel } from "@/app/components/analysis/ToxicophorePanel";
 import { Badge } from "@/app/components/ui/badge";
 import { Progress } from "@/app/components/ui/progress";
 import { Skeleton } from "@/app/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import { useSSEStream } from "@/app/hooks/useSSEStream";
 import { getSessionResult } from "@/app/lib/api";
-import type {
-  PipelineState,
-  FinalReport,
-  SelectivityResult,
-} from "@/app/lib/types";
-
-// Components
-import { PipelineStatus } from "@/app/components/analysis/PipelineStatus";
-import { MoleculeCard } from "@/app/components/analysis/MoleculeCard";
-import { ADMETPanel } from "@/app/components/analysis/ADMETPanel";
-import { ToxicophorePanel } from "@/app/components/analysis/ToxicophorePanel";
-import { DockingScoreChart } from "@/app/components/analysis/DockingScoreChart";
-import { ClinicalTrialPanel } from "@/app/components/analysis/ClinicalTrialPanel";
-import { KnowledgeGraph } from "@/app/components/analysis/KnowledgeGraph";
-import { ReasoningTrace } from "@/app/components/analysis/ReasoningTrace";
-import { ResistanceProfile } from "@/app/components/analysis/ResistanceProfile";
-import { LangSmithTrace } from "@/app/components/analysis/LangSmithTrace";
-import { SaveDiscoveryButton } from "@/app/components/analysis/SaveDiscoveryButton";
-import { SimilarityPanel } from "@/app/components/analysis/SimilarityPanel";
-import { ExportButton } from "@/app/components/analysis/ExportButton";
-import { EvolutionTree } from "@/app/components/analysis/EvolutionTree";
-import { ConfidenceBanner } from "@/app/components/analysis/ConfidenceBanner";
-import { PocketGeometryAnalysis } from "@/app/components/analysis/PocketGeometryAnalysis";
-import { MDValidation } from "@/app/components/analysis/MDValidation";
-import { SynthesisRoute } from "@/app/components/analysis/SynthesisRoute";
+import type { FinalReport, PipelineState, SelectivityResult } from "@/app/lib/types";
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -53,13 +43,9 @@ export default function AnalysisPage({ params }: PageProps) {
   const startTimeRef = useRef(Date.now());
 
   // Determine progress from events
-  const completedAgents = events.filter(
-    (e) => e.event === "agent_complete",
-  ).length;
+  const completedAgents = events.filter((e) => e.event === "agent_complete").length;
   const progress = Math.min(95, (completedAgents / 22) * 100);
-  const currentAgent = [...events]
-    .reverse()
-    .find((e) => e.event === "agent_start")?.agent;
+  const currentAgent = [...events].reverse().find((e) => e.event === "agent_start")?.agent;
 
   // Load final result when complete
   useEffect(() => {
@@ -70,8 +56,7 @@ export default function AnalysisPage({ params }: PageProps) {
   }, [isComplete, sessionId]);
 
   const report = result?.final_report as FinalReport | null;
-  const selectivity = (result?.selectivity_results ??
-    []) as SelectivityResult[];
+  const selectivity = (result?.selectivity_results ?? []) as SelectivityResult[];
   const primaryPdbId = result?.structures?.[0]?.pdb_id;
 
   return (
@@ -95,10 +80,7 @@ export default function AnalysisPage({ params }: PageProps) {
               Session: {sessionId}
             </span>
             {isComplete && result && (
-              <SaveDiscoveryButton
-                sessionId={sessionId}
-                initialDiscoveryId={result.discovery_id}
-              />
+              <SaveDiscoveryButton sessionId={sessionId} initialDiscoveryId={result.discovery_id} />
             )}
           </div>
         </div>
@@ -106,10 +88,7 @@ export default function AnalysisPage({ params }: PageProps) {
         {/* Error state */}
         {(streamError || loadError) && (
           <div className="mb-6 p-4 rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/10 flex items-center gap-3">
-            <AlertCircle
-              size={16}
-              className="text-[var(--destructive)] shrink-0"
-            />
+            <AlertCircle size={16} className="text-[var(--destructive)] shrink-0" />
             <span className="text-sm">{streamError || loadError}</span>
           </div>
         )}
@@ -124,9 +103,7 @@ export default function AnalysisPage({ params }: PageProps) {
                   <span className="text-[var(--muted-foreground)]">
                     {currentAgent || "Starting…"}
                   </span>
-                  <span className="text-[var(--primary)] font-medium">
-                    {Math.round(progress)}%
-                  </span>
+                  <span className="text-[var(--primary)] font-medium">{Math.round(progress)}%</span>
                 </div>
                 <Progress value={progress} />
               </div>
@@ -243,9 +220,7 @@ export default function AnalysisPage({ params }: PageProps) {
                   <TabsContent value="pocket">
                     <PocketGeometryAnalysis
                       volumeDelta={(result as any).pocket_delta?.volume_delta}
-                      hydrophobicityDelta={
-                        (result as any).pocket_delta?.hydrophobicity_score_delta
-                      }
+                      hydrophobicityDelta={(result as any).pocket_delta?.hydrophobicity_score_delta}
                       polarityDelta={(result as any).pocket_delta?.polarity_score_delta}
                       chargeDelta={(result as any).pocket_delta?.charge_score_delta}
                       pocketReshaped={(result as any).pocket_delta?.pocket_reshaped}
@@ -256,12 +231,9 @@ export default function AnalysisPage({ params }: PageProps) {
                   <TabsContent value="selectivity">
                     <div className="rounded-xl border border-[var(--border)] overflow-hidden">
                       <div className="p-4 bg-[var(--muted)] border-b border-[var(--border)]">
-                        <h3 className="font-semibold text-sm">
-                          Selectivity Analysis
-                        </h3>
+                        <h3 className="font-semibold text-sm">Selectivity Analysis</h3>
                         <p className="text-xs text-[var(--muted-foreground)] mt-1">
-                          Ratio = target affinity / off-target affinity. Higher
-                          is safer.
+                          Ratio = target affinity / off-target affinity. Higher is safer.
                         </p>
                       </div>
                       <div className="overflow-x-auto">
@@ -297,10 +269,15 @@ export default function AnalysisPage({ params }: PageProps) {
                                   {s.target_affinity != null ? s.target_affinity.toFixed(2) : "N/A"}
                                 </td>
                                 <td className="p-3 text-red-500">
-                                  {s.off_target_affinity != null ? s.off_target_affinity.toFixed(2) : "N/A"}
+                                  {s.off_target_affinity != null
+                                    ? s.off_target_affinity.toFixed(2)
+                                    : "N/A"}
                                 </td>
                                 <td className="p-3 font-bold">
-                                  {s.selectivity_ratio != null ? s.selectivity_ratio.toFixed(2) : "N/A"}×
+                                  {s.selectivity_ratio != null
+                                    ? s.selectivity_ratio.toFixed(2)
+                                    : "N/A"}
+                                  ×
                                 </td>
                                 <td className="p-3">
                                   <span
@@ -340,12 +317,9 @@ export default function AnalysisPage({ params }: PageProps) {
                   <TabsContent value="evolution">
                     <div className="rounded-xl border border-[var(--border)] overflow-hidden">
                       <div className="p-4 bg-[var(--muted)] border-b border-[var(--border)]">
-                        <h3 className="font-semibold text-sm">
-                          Molecule Evolution Tree
-                        </h3>
+                        <h3 className="font-semibold text-sm">Molecule Evolution Tree</h3>
                         <p className="text-xs text-[var(--muted-foreground)] mt-1">
-                          How seed molecules were transformed across
-                          optimization generations.
+                          How seed molecules were transformed across optimization generations.
                         </p>
                       </div>
                       <EvolutionTree tree={report.evolution_tree} />
@@ -356,18 +330,12 @@ export default function AnalysisPage({ params }: PageProps) {
                   <TabsContent value="admet">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       <div className="rounded-xl border border-[var(--border)] p-4">
-                        <h3 className="font-semibold text-sm mb-3">
-                          ADMET Profiles
-                        </h3>
+                        <h3 className="font-semibold text-sm mb-3">ADMET Profiles</h3>
                         <ADMETPanel profiles={result.admet_profiles ?? []} />
                       </div>
                       <div className="rounded-xl border border-[var(--border)] p-4">
-                        <h3 className="font-semibold text-sm mb-3">
-                          Toxicophore Highlights
-                        </h3>
-                        <ToxicophorePanel
-                          highlights={result.toxicophore_highlights ?? []}
-                        />
+                        <h3 className="font-semibold text-sm mb-3">Toxicophore Highlights</h3>
+                        <ToxicophorePanel highlights={result.toxicophore_highlights ?? []} />
                       </div>
                     </div>
                   </TabsContent>
@@ -406,7 +374,9 @@ export default function AnalysisPage({ params }: PageProps) {
                           numSteps={lead.synthesis_steps}
                           saScore={lead.sa_score}
                           estimatedCost={lead.synthesis_cost}
-                          synthesizable={lead.synthesis_steps ? lead.synthesis_steps <= 6 : undefined}
+                          synthesizable={
+                            lead.synthesis_steps ? lead.synthesis_steps <= 6 : undefined
+                          }
                         />
                       </div>
                     ))}
@@ -415,12 +385,8 @@ export default function AnalysisPage({ params }: PageProps) {
                   {/* Docking */}
                   <TabsContent value="docking">
                     <div className="rounded-xl border border-[var(--border)] p-4">
-                      <h3 className="font-semibold text-sm mb-3">
-                        Docking Score Distribution
-                      </h3>
-                      <DockingScoreChart
-                        results={result.docking_results ?? []}
-                      />
+                      <h3 className="font-semibold text-sm mb-3">Docking Score Distribution</h3>
+                      <DockingScoreChart results={result.docking_results ?? []} />
                     </div>
                   </TabsContent>
 
@@ -435,18 +401,14 @@ export default function AnalysisPage({ params }: PageProps) {
                           </Badge>
                         )}
                       </h3>
-                      <ClinicalTrialPanel
-                        trials={report.clinical_trials ?? []}
-                      />
+                      <ClinicalTrialPanel trials={report.clinical_trials ?? []} />
                     </div>
                   </TabsContent>
 
                   {/* Knowledge Graph */}
                   <TabsContent value="graph">
                     <div className="rounded-xl border border-[var(--border)] p-4">
-                      <h3 className="font-semibold text-sm mb-3">
-                        Knowledge Graph
-                      </h3>
+                      <h3 className="font-semibold text-sm mb-3">Knowledge Graph</h3>
                       <KnowledgeGraph graph={result.knowledge_graph} />
                     </div>
                   </TabsContent>
@@ -455,24 +417,15 @@ export default function AnalysisPage({ params }: PageProps) {
                   <TabsContent value="reasoning">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       <div className="rounded-xl border border-[var(--border)] p-4">
-                        <h3 className="font-semibold text-sm mb-3">
-                          Agent Reasoning
-                        </h3>
+                        <h3 className="font-semibold text-sm mb-3">Agent Reasoning</h3>
                         <ReasoningTrace trace={result.reasoning_trace} />
                       </div>
                       <div className="space-y-4">
                         <div className="rounded-xl border border-[var(--border)] p-4">
-                          <h3 className="font-semibold text-sm mb-3">
-                            Resistance Analysis
-                          </h3>
-                          <ResistanceProfile
-                            forecast={report.resistance_forecast}
-                          />
+                          <h3 className="font-semibold text-sm mb-3">Resistance Analysis</h3>
+                          <ResistanceProfile forecast={report.resistance_forecast} />
                         </div>
-                        <LangSmithTrace
-                          runId={result.langsmith_run_id}
-                          metrics={report.metrics}
-                        />
+                        <LangSmithTrace runId={result.langsmith_run_id} metrics={report.metrics} />
                       </div>
                     </div>
                   </TabsContent>
@@ -499,15 +452,15 @@ export default function AnalysisPage({ params }: PageProps) {
                             {paper.title}
                           </a>
                           <div className="text-xs text-[var(--muted-foreground)]">
-                            {paper.journal} · {paper.publication_date} · PMID{" "}
-                            {paper.pubmed_id}
+                            {paper.journal} · {paper.publication_date} · PMID {paper.pubmed_id}
                           </div>
                         </div>
                       ))}
                       <SimilarityPanel
                         similarMolecules={
-                          (result as unknown as Record<string, unknown>)
-                            .similar_molecules as string[] | undefined
+                          (result as unknown as Record<string, unknown>).similar_molecules as
+                            | string[]
+                            | undefined
                         }
                       />
                     </div>
@@ -517,15 +470,10 @@ export default function AnalysisPage({ params }: PageProps) {
                   <TabsContent value="export">
                     <div className="space-y-4">
                       <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)]">
-                        <h3 className="font-semibold text-sm mb-3">
-                          Export Discovery
-                        </h3>
+                        <h3 className="font-semibold text-sm mb-3">Export Discovery</h3>
                         <ExportButton sessionId={sessionId} />
                       </div>
-                      <LangSmithTrace
-                        runId={result.langsmith_run_id}
-                        metrics={report.metrics}
-                      />
+                      <LangSmithTrace runId={result.langsmith_run_id} metrics={report.metrics} />
                     </div>
                   </TabsContent>
                 </Tabs>

@@ -1,6 +1,6 @@
 "use client";
-import { cn } from "@/app/lib/utils";
 import type { InputHTMLAttributes } from "react";
+import { cn } from "@/app/lib/utils";
 
 interface SwitchProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
   onCheckedChange?: (checked: boolean) => void;
@@ -27,4 +27,5 @@ function Switch({ className, checked, onCheckedChange, onChange, ...props }: Swi
     </button>
   );
 }
+
 export { Switch };

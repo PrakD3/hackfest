@@ -1,6 +1,6 @@
 "use client";
+import { AlertCircle, DollarSign, FlaskConical } from "lucide-react";
 import { Badge } from "@/app/components/ui/badge";
-import { FlaskConical, DollarSign, AlertCircle } from "lucide-react";
 
 interface SynthesisRouteProps {
   numSteps?: number;
@@ -59,14 +59,10 @@ export function SynthesisRoute({
         )}
 
         {saScore !== undefined && (
-          <div
-            className={`p-3 rounded-lg border border-[var(--border)]/50 ${getSAColor(saScore)}`}
-          >
+          <div className={`p-3 rounded-lg border border-[var(--border)]/50 ${getSAColor(saScore)}`}>
             <div className="text-xs text-[var(--muted-foreground)] mb-1">SA Score</div>
             <div className="text-2xl font-bold">{saScore.toFixed(1)}</div>
-            <div className="text-xs text-[var(--muted-foreground)] mt-1">
-              {getSALabel(saScore)}
-            </div>
+            <div className="text-xs text-[var(--muted-foreground)] mt-1">{getSALabel(saScore)}</div>
           </div>
         )}
 
@@ -85,8 +81,8 @@ export function SynthesisRoute({
         <div className="flex items-start gap-2">
           <AlertCircle size={14} className="mt-0.5 text-blue-600 dark:text-blue-400 shrink-0" />
           <p className="text-xs text-blue-700 dark:text-blue-400">
-            Synthesis route planned with ASKCOS retrosynthesis. All reagents and intermediates
-            are purchasable or easily derived from commercial materials.
+            Synthesis route planned with ASKCOS retrosynthesis. All reagents and intermediates are
+            purchasable or easily derived from commercial materials.
           </p>
         </div>
       </div>

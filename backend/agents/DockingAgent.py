@@ -29,6 +29,7 @@ class DockingAgent:
             return {"errors": [f"DockingAgent failed: {exc}"]}
 
     async def _execute(self, state: dict) -> dict:
+        log = get_logger(self.__class__.__name__)
         plan = state.get("analysis_plan") or {}
         if not getattr(plan, "run_docking", True):
             return {}
@@ -36,16 +37,33 @@ class DockingAgent:
         molecules = state.get("generated_molecules", [])
         pocket = state.get("binding_pocket") or {}
         structures = state.get("structures", [])
+        pdb_content = state.get("pdb_content")  # Real PDB downloaded by StructurePrepAgent
         pdb_id = structures[0].get("pdb_id", "unknown") if structures else "unknown"
         protein_name = structures[0].get("title", "unknown") if structures else "unknown"
+
+        log.info(f"DockingAgent state: molecules={len(molecules)}, pdb_content_length={len(pdb_content) if pdb_content else 0}, pdb_id={pdb_id}, structures={len(structures)}")
 
         if not molecules:
             return {"docking_results": [], "docking_mode": "no_molecules"}
 
+        if not pdb_content:
+            # No real structure available - can't dock
+            log.error("❌ No PDB structure content available - DockingAgent cannot proceed without real protein structure")
+            return {"docking_results": [], "docking_mode": "no_structure", "warnings": ["No protein structure available for docking"]}
+
+        # Check for tools: first try shutil.which(), then hardcoded paths
+        import os
         has_gnina = shutil.which("gnina") is not None
-        has_vina = shutil.which("vina") is not None
+        has_vina = shutil.which("vina") is not None or os.path.exists(r"C:\tools\vina.exe")
         has_openbabel = shutil.which("obabel") is not None
         mode = "gnina" if has_gnina else ("vina" if has_vina else "ai_fallback")
+        
+        log.info(f"Docking mode detection: has_gnina={has_gnina}, has_vina={has_vina}, mode={mode}")
+        
+        if not has_vina and not has_gnina:
+            # No docking tools available
+            log.error("❌ Neither Vina nor Gnina available - cannot dock")
+            return {"docking_results": [], "docking_mode": "no_tools", "warnings": ["Docking tools not available"]}
 
         # Track warnings in state
         warnings = []
@@ -68,8 +86,8 @@ class DockingAgent:
             if not smiles:
                 continue
             
-            # Dock to mutant
-            mut_energy = await self._dock(smiles, pocket, pdb_id, protein_name, mode, is_wildtype=False)
+            # Dock to mutant (using REAL PDB structure)
+            mut_energy = await self._dock(smiles, pocket, pdb_content, pdb_id, protein_name, mode, is_wildtype=False)
             if mut_energy is None:
                 skipped += 1
                 continue
@@ -78,7 +96,7 @@ class DockingAgent:
             wt_energy = None
             affinity_delta = None
             if has_wt and wt_pdb_content:
-                wt_energy = await self._dock_to_structure(smiles, pocket, wt_pdb_content, "WT", mode, is_wildtype=True)
+                wt_energy = await self._dock(smiles, pocket, wt_pdb_content, "WT", "WT", mode, is_wildtype=True)
                 if wt_energy is not None:
                     affinity_delta = mut_energy - wt_energy  # Negative = selective for mutant
             
@@ -126,7 +144,7 @@ class DockingAgent:
         }
 
     async def _dock(
-        self, smiles: str, pocket: dict, pdb_id: str, protein_name: str, mode: str, is_wildtype: bool = False
+        self, smiles: str, pocket: dict, pdb_content: str, pdb_id: str, protein_name: str, mode: str, is_wildtype: bool = False
     ) -> float:
         from rdkit import Chem
 
@@ -145,7 +163,7 @@ class DockingAgent:
             prefix = "WT_" if is_wildtype else ""
             return self._ai_score(smiles, f"{prefix}{pdb_id}", protein_name)
         try:
-            return await self._vina_dock(smiles, pocket, pdb_id, mode)
+            return await self._vina_dock(smiles, pocket, pdb_content, pdb_id, mode)
         except Exception:
             prefix = "WT_" if is_wildtype else ""
             return self._ai_score(smiles, f"{prefix}{pdb_id}", protein_name)
@@ -203,7 +221,7 @@ class DockingAgent:
         h = int(hashlib.sha256(f"{smiles}|{pdb_id}|{protein_name}".encode()).hexdigest()[:8], 16)
         return -(7.0 + (h % 50) / 10.0)
 
-    async def _vina_dock(self, smiles: str, pocket: dict, pdb_id: str, mode: str) -> float:
+    async def _vina_dock(self, smiles: str, pocket: dict, pdb_content: str, pdb_id: str, mode: str) -> float:
         import os
         import subprocess
         import tempfile
@@ -243,6 +261,8 @@ class DockingAgent:
             sdf_path = os.path.join(tmpdir, "ligand.sdf")
             pdbqt_path = os.path.join(tmpdir, "ligand.pdbqt")
             out_path = os.path.join(tmpdir, "docked.pdbqt")
+            receptor_pdb = os.path.join(tmpdir, "receptor.pdb")
+            
             writer = Chem.SDWriter(sdf_path)
             writer.write(mol)
             writer.close()
@@ -257,10 +277,61 @@ class DockingAgent:
             if result.returncode != 0:
                 raise RuntimeError(f"obabel conversion failed: {result.stderr}")
 
+            # Write REAL PDB content to file
+            with open(receptor_pdb, "w") as f:
+                f.write(pdb_content)
+            
+            # **CRITICAL FIX**: Extract only ATOM/HETATM lines from PDB
+            # Vina is strict about PDBQT format - fails on HEADER, TITLE, etc. lines
+            pdb_atoms = []
+            for line in pdb_content.splitlines():
+                if line.startswith("ATOM") or line.startswith("HETATM"):
+                    pdb_atoms.append(line)
+            
+            if not pdb_atoms:
+                raise RuntimeError("No ATOM/HETATM records found in PDB")
+            
+            # Write atoms-only PDB for obabel conversion
+            atom_only_pdb = os.path.join(tmpdir, "receptor_atoms_only.pdb")
+            with open(atom_only_pdb, "w") as f:
+                for line in pdb_atoms:
+                    f.write(line + "\n")
+                f.write("END\n")
+            
+            receptor_pdbqt = os.path.join(tmpdir, "receptor.pdbqt")
+            
+            # Convert atoms-only PDB to PDBQT with obabel
+            result = subprocess.run(
+                ["obabel", atom_only_pdb, "-O", receptor_pdbqt, "-xh"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            
+            if result.returncode != 0:
+                log = get_logger(self.__class__.__name__)
+                log.warning(f"obabel PDBQT conversion failed: {result.stderr}")
+                # Fallback: copy atom-only PDB as PDBQT
+                import shutil as shutil_module
+                shutil_module.copy(atom_only_pdb, receptor_pdbqt)
+            
+            # Use full path to vina/gnina executable
+            exe_name = mode
+            if mode == "vina":
+                # Try hardcoded path first for Windows, then PATH
+                exe_path = r"C:\tools\vina.exe" if os.path.exists(r"C:\tools\vina.exe") else shutil.which("vina") or "vina"
+            elif mode == "gnina":
+                exe_path = shutil.which("gnina") or "gnina"
+            else:
+                exe_path = mode
+            
+            log = get_logger(self.__class__.__name__)
+            log.info(f"Vina execution: exe_path={exe_path}, mode={mode}, receptor={receptor_pdbqt}")
+
             cmd = [
-                mode,
+                exe_path,
                 "--receptor",
-                f"/tmp/{pdb_id}.pdbqt",
+                receptor_pdbqt,  # Use prepared PDBQT
                 "--ligand",
                 pdbqt_path,
                 "--center_x",
@@ -281,6 +352,11 @@ class DockingAgent:
                 out_path,
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            
+            # Log errors for debugging
+            if result.returncode != 0:
+                log.error(f"Vina error: returncode={result.returncode}, stderr={result.stderr[:200]}")
+            
             for line in result.stdout.splitlines():
                 if "REMARK VINA RESULT:" in line:
                     parts = line.split()

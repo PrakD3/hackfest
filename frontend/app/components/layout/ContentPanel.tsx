@@ -19,19 +19,13 @@ export const ContentPanel = forwardRef<HTMLDivElement, ContentPanelProps>(
             ? "bg-transparent m-0"
             : "bg-transparent m-0 lg:bg-sidebar lg:m-2 lg:ml-0 lg:rounded-lg lg:border"
         }`}
-        style={
-          borderless
-            ? { scrollbarWidth: "none", msOverflowStyle: "none" }
-            : undefined
-        }
+        style={borderless ? { scrollbarWidth: "none", msOverflowStyle: "none" } : undefined}
       >
         {children}
-        {borderless && (
-          <style jsx>{`div::-webkit-scrollbar { display: none; }`}</style>
-        )}
+        {borderless && <style jsx>{`div::-webkit-scrollbar { display: none; }`}</style>}
       </div>
     );
-  },
+  }
 );
 
 ContentPanel.displayName = "ContentPanel";

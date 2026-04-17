@@ -1,17 +1,16 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Toaster } from "sonner";
 import { Geist } from "next/font/google";
-import { cn } from "@/lib/utils";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "sonner";
 import { AppShell } from "@/app/components/layout/AppShell";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "Drug Discovery AI",
-  description:
-    "Multi-agent precision medicine pipeline for novel drug discovery",
+  description: "Multi-agent precision medicine pipeline for novel drug discovery",
   keywords: ["drug discovery", "AI", "precision medicine", "molecular docking"],
 };
 
