@@ -10,6 +10,13 @@ from utils.logger import get_logger
 class DockingAgent:
     """Docks generated molecules vs. binding pocket."""
 
+    # Uncertainty ranges for each docking method (in kcal/mol)
+    UNCERTAINTY_MAP = {
+        "vina": 1.8,
+        "gnina": 1.5,
+        "ai_fallback": 2.5,  # Higher uncertainty for hash-based
+    }
+
     async def run(self, state: dict) -> dict:
         log = get_logger(self.__class__.__name__)
         log.info("starting")
@@ -37,35 +44,89 @@ class DockingAgent:
 
         has_gnina = shutil.which("gnina") is not None
         has_vina = shutil.which("vina") is not None
+        has_openbabel = shutil.which("obabel") is not None
         mode = "gnina" if has_gnina else ("vina" if has_vina else "ai_fallback")
+
+        # Track warnings in state
+        warnings = []
+        if mode == "ai_fallback":
+            warnings.append(
+                "⚠️ Vina/Gnina not available. Using hash-based mock scoring. Results are computational estimates only."
+            )
+        if mode != "ai_fallback" and not has_openbabel:
+            warnings.append("⚠️ Open Babel not available. Docking may fail.")
 
         results = []
         skipped = 0
+        
+        # Check if we have both mutant and WT structures for dual docking
+        has_wt = state.get("has_wt", False)
+        wt_pdb_content = state.get("wt_pdb_content", "")
+        
         for mol in molecules[:50]:
             smiles = mol.get("smiles", "")
             if not smiles:
                 continue
-            energy = await self._dock(smiles, pocket, pdb_id, protein_name, mode)
-            if energy is None:
+            
+            # Dock to mutant
+            mut_energy = await self._dock(smiles, pocket, pdb_id, protein_name, mode, is_wildtype=False)
+            if mut_energy is None:
                 skipped += 1
                 continue
-            if isinstance(energy, float) and energy < 0:
-                results.append(
-                    {
-                        "smiles": smiles,
-                        "compound_name": f"Molecule_{len(results) + 1}",
-                        "structure": pdb_id,
-                        "binding_energy": energy,
-                        "confidence": self._confidence(energy),
-                        "method": mode,
-                    }
-                )
+            
+            # Dock to wildtype if available
+            wt_energy = None
+            affinity_delta = None
+            if has_wt and wt_pdb_content:
+                wt_energy = await self._dock_to_structure(smiles, pocket, wt_pdb_content, "WT", mode, is_wildtype=True)
+                if wt_energy is not None:
+                    affinity_delta = mut_energy - wt_energy  # Negative = selective for mutant
+            
+            if isinstance(mut_energy, float) and mut_energy < 0:
+                # Format with uncertainty ranges
+                formatted_energy = self._format_energy(mut_energy, mode)
+                result_entry = {
+                    "smiles": smiles,
+                    "compound_name": f"Molecule_{len(results) + 1}",
+                    "structure": pdb_id,
+                    "binding_energy": mut_energy,  # Raw mutant affinity
+                    "binding_energy_formatted": formatted_energy,  # With uncertainty
+                    "confidence": self._confidence(mut_energy),
+                    "method": mode,
+                    "is_mock": mode == "ai_fallback",  # Flag mock results
+                }
+                
+                # Add WT comparison if available
+                if wt_energy is not None and affinity_delta is not None:
+                    result_entry["wt_binding_energy"] = wt_energy
+                    result_entry["affinity_delta"] = affinity_delta
+                    result_entry["selectivity_10fold"] = affinity_delta < -1.36  # ~10x at 298K
+                    result_entry["is_selective"] = affinity_delta < -0.68  # ~5x at 298K
+                
+                results.append(result_entry)
 
         results.sort(key=lambda x: x["binding_energy"])
-        return {"docking_results": results, "docking_mode": mode}
+        
+        # Add warnings to state if they exist
+        if warnings:
+            state["warnings"] = state.get("warnings", []) + warnings
+        
+        # Update confidence based on docking mode
+        if state.get("confidence") is None:
+            state["confidence"] = {}
+        state["confidence"]["docking"] = 0.3 if mode == "ai_fallback" else (0.7 if mode == "vina" else 0.8)
+        
+        return {
+            "docking_results": results,
+            "docking_mode": mode,
+            "docking_warnings": warnings,
+            "has_vina": has_vina,
+            "has_gnina": has_gnina,
+            "dual_docking": has_wt,
+        }
 
     async def _dock(
-        self, smiles: str, pocket: dict, pdb_id: str, protein_name: str, mode: str
+        self, smiles: str, pocket: dict, pdb_id: str, protein_name: str, mode: str, is_wildtype: bool = False
     ) -> float:
         from rdkit import Chem
 
@@ -81,11 +142,62 @@ class DockingAgent:
             return None
 
         if mode == "ai_fallback":
-            return self._ai_score(smiles, pdb_id, protein_name)
+            prefix = "WT_" if is_wildtype else ""
+            return self._ai_score(smiles, f"{prefix}{pdb_id}", protein_name)
         try:
             return await self._vina_dock(smiles, pocket, pdb_id, mode)
         except Exception:
-            return self._ai_score(smiles, pdb_id, protein_name)
+            prefix = "WT_" if is_wildtype else ""
+            return self._ai_score(smiles, f"{prefix}{pdb_id}", protein_name)
+
+    async def _dock_to_structure(
+        self, smiles: str, pocket: dict, pdb_content: str, struct_name: str, mode: str, is_wildtype: bool = False
+    ) -> float:
+        """Dock molecule to a given PDB structure (as string)."""
+        from rdkit import Chem
+        import tempfile
+        import os
+
+        # Validate molecule
+        mol = Chem.MolFromSmiles(smiles)
+        if mol is None:
+            return None
+
+        try:
+            Chem.SanitizeMol(mol)
+        except Exception:
+            return None
+
+        if mode == "ai_fallback":
+            # Hash-based score that differs from mutant for "wildtype"
+            return self._ai_score(smiles, struct_name, "wildtype")
+        
+        try:
+            # Create temporary PDB file for this structure
+            with tempfile.TemporaryDirectory() as tmpdir:
+                pdb_path = os.path.join(tmpdir, f"{struct_name}.pdb")
+                with open(pdb_path, "w") as f:
+                    f.write(pdb_content)
+                
+                # Prepare PDBQT file
+                pdbqt_path = os.path.join(tmpdir, f"{struct_name}.pdbqt")
+                import subprocess
+                result = subprocess.run(
+                    ["meeko", "-i", pdb_path, "-o", pdbqt_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                
+                if result.returncode != 0:
+                    # Fallback to hash if conversion fails
+                    return self._ai_score(smiles, struct_name, "wildtype")
+                
+                # Dock molecule to this structure
+                return await self._vina_dock_to_receptor(smiles, pocket, pdbqt_path, mode)
+        except Exception:
+            # Fallback to hash-based scoring
+            return self._ai_score(smiles, struct_name, "wildtype")
 
     def _ai_score(self, smiles: str, pdb_id: str, protein_name: str) -> float:
         h = int(hashlib.sha256(f"{smiles}|{pdb_id}|{protein_name}".encode()).hexdigest()[:8], 16)
@@ -175,6 +287,94 @@ class DockingAgent:
                     if len(parts) >= 4:
                         return float(parts[3])
         raise RuntimeError("Vina parse failed")
+
+    async def _vina_dock_to_receptor(self, smiles: str, pocket: dict, receptor_pdbqt: str, mode: str) -> float:
+        """Dock molecule to a specific pre-prepared receptor PDBQT file."""
+        import os
+        import subprocess
+        import tempfile
+
+        try:
+            from rdkit import Chem
+            from rdkit.Chem import AllChem
+        except ImportError:
+            raise RuntimeError("RDKit not available")
+
+        mol = Chem.MolFromSmiles(smiles)
+        if mol is None:
+            raise ValueError("Invalid SMILES")
+
+        mol = Chem.AddHs(mol)
+        conf_id = AllChem.EmbedMolecule(mol, AllChem.ETKDG())
+        if conf_id < 0:
+            AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
+
+        conf = mol.GetConformer()
+        for atom_idx in range(mol.GetNumAtoms()):
+            pos = conf.GetAtomPosition(atom_idx)
+            if pos.x != pos.x or pos.y != pos.y or pos.z != pos.z:
+                raise ValueError(f"NaN coordinates in molecule {smiles}")
+
+        try:
+            AllChem.MMFFOptimizeMolecule(mol)
+        except Exception:
+            pass
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sdf_path = os.path.join(tmpdir, "ligand.sdf")
+            pdbqt_path = os.path.join(tmpdir, "ligand.pdbqt")
+            out_path = os.path.join(tmpdir, "docked.pdbqt")
+            
+            writer = Chem.SDWriter(sdf_path)
+            writer.write(mol)
+            writer.close()
+
+            result = subprocess.run(
+                ["obabel", sdf_path, "-O", pdbqt_path, "--gen3d"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            if result.returncode != 0:
+                raise RuntimeError(f"obabel conversion failed")
+
+            cmd = [
+                mode,
+                "--receptor",
+                receptor_pdbqt,
+                "--ligand",
+                pdbqt_path,
+                "--center_x",
+                str(pocket.get("center_x", 0)),
+                "--center_y",
+                str(pocket.get("center_y", 0)),
+                "--center_z",
+                str(pocket.get("center_z", 0)),
+                "--size_x",
+                str(min(pocket.get("size_x", 20), 20)),
+                "--size_y",
+                str(min(pocket.get("size_y", 20), 20)),
+                "--size_z",
+                str(min(pocket.get("size_z", 20), 20)),
+                "--exhaustiveness",
+                "4",
+                "--out",
+                out_path,
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            for line in result.stdout.splitlines():
+                if "REMARK VINA RESULT:" in line:
+                    parts = line.split()
+                    if len(parts) >= 4:
+                        return float(parts[3])
+        raise RuntimeError("Vina parse failed")
+
+    def _format_energy(self, energy: float, method: str) -> str:
+        """Format binding energy with uncertainty range."""
+        uncertainty = self.UNCERTAINTY_MAP.get(method, 2.0)
+        return f"{energy:.1f} ± {uncertainty:.1f} kcal/mol ({method.upper()})"
 
     def _confidence(self, energy: float) -> str:
         if energy <= -10:

@@ -32,6 +32,28 @@ class ReportAgent:
         trials = state.get("clinical_trials", [])
         optimized = state.get("optimized_leads", [])
 
+        # Calculate final confidence score
+        confidence_dict = state.get("confidence", {})
+        confidence_scores = [
+            confidence_dict.get("structure", 1.0),
+            confidence_dict.get("docking", 1.0),
+            confidence_dict.get("selectivity", 1.0),
+            confidence_dict.get("admet", 1.0),
+        ]
+        final_confidence = min(confidence_scores) if confidence_scores else 0.5
+        confidence_dict["final"] = final_confidence
+        
+        # Classify confidence tier
+        if final_confidence >= 0.7:
+            confidence_tier = "GREEN"
+            confidence_banner = "✅ HIGH CONFIDENCE: Results are well-grounded in structural and docking data."
+        elif final_confidence >= 0.5:
+            confidence_tier = "AMBER"
+            confidence_banner = "⚠️ MEDIUM CONFIDENCE: Some limitations present. See confidence details for caveats."
+        else:
+            confidence_tier = "RED"
+            confidence_banner = "🔴 LOW CONFIDENCE: Results are primarily computational estimates. Experimental validation strongly recommended."
+
         admet_map = {a["smiles"]: a for a in admet}
         sel_map = {s["smiles"]: s for s in selectivity}
         highlight_map = {h["smiles"]: h for h in highlights}
@@ -87,6 +109,9 @@ class ReportAgent:
             "resistance_forecast": state.get("resistance_forecast"),
             "clinical_trials": trials,
             "evolution_tree": state.get("evolution_tree"),
+            "confidence_tier": confidence_tier,
+            "confidence_banner": confidence_banner,
+            "confidence_object": confidence_dict,
             "metrics": {
                 "literature_count": len(state.get("literature", [])),
                 "proteins_found": len(state.get("proteins", [])),

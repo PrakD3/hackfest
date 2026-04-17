@@ -1,0 +1,57 @@
+graph TD
+    START([START]) --> MPA[MutationParserAgent]
+    MPA --> PA[PlannerAgent]
+    
+    PA --> FEA1[FetchAgent: PubMed]
+    PA --> FEA2[FetchAgent: UniProt]
+    PA --> FEA3[FetchAgent: RCSB]
+    PA --> FEA4[FetchAgent: PubChem]
+    
+    FEA1 --> SPA[StructurePrepAgent<br/>★ UPGRADED: ESMFold]
+    FEA2 --> SPA
+    FEA3 --> SPA
+    FEA4 --> SPA
+    
+    SPA --> VEA[VariantEffectAgent<br/>★ NEW: ESM-1v scoring]
+    VEA --> PDA[PocketDetectionAgent<br/>★ UPGRADED: Pocket delta]
+    PDA --> MGA[MoleculeGenerationAgent<br/>★ UPGRADED: Pocket2Mol]
+    MGA --> DA[DockingAgent<br/>★ UPGRADED: Gnina CNN]
+    
+    DA --> SA[SelectivityAgent]
+    SA --> AA[ADMETAgent]
+    AA --> LOA[LeadOptimizationAgent]
+    
+    LOA --> GNA[GNNAffinityAgent<br/>★ NEW: DimeNet++ filter→2]
+    GNA --> MDA[MDValidationAgent<br/>★ NEW: OpenMM 50ns]
+    
+    MDA --> RA[ResistanceAgent]
+    RA --> SSA[SimilaritySearchAgent]
+    RA --> SYA[SynergyAgent]
+    
+    SSA --> CTA[ClinicalTrialAgent]
+    SYA --> CTA
+    
+    CTA --> SYNT[SynthesisAgent<br/>★ NEW: ASKCOS]
+    SYNT --> END([Output])
+    
+    style MPA fill:#e0f2fe
+    style PA fill:#e0f2fe
+    style FEA1 fill:#e0f2fe
+    style FEA2 fill:#e0f2fe
+    style FEA3 fill:#e0f2fe
+    style FEA4 fill:#e0f2fe
+    style SPA fill:#fef3c7
+    style VEA fill:#dcfce7
+    style PDA fill:#fef3c7
+    style MGA fill:#fef3c7
+    style DA fill:#fef3c7
+    style SA fill:#e0f2fe
+    style AA fill:#e0f2fe
+    style LOA fill:#e0f2fe
+    style GNA fill:#dcfce7
+    style MDA fill:#dcfce7
+    style RA fill:#e0f2fe
+    style SSA fill:#e0f2fe
+    style SYA fill:#e0f2fe
+    style CTA fill:#e0f2fe
+    style SYNT fill:#dcfce7

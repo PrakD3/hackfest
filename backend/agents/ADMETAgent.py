@@ -133,4 +133,21 @@ class ADMETAgent:
 
             profiles.append(profile)
 
-        return {"admet_profiles": profiles, "toxicophore_highlights": highlights}
+        # Calculate ADMET confidence
+        if profiles:
+            pass_count = sum(1 for p in profiles if p.get("lipinski_pass", False))
+            pass_rate = pass_count / len(profiles) if profiles else 0.0
+            admet_confidence = 0.5 + (pass_rate * 0.5)  # 0.5-1.0 based on pass rate
+        else:
+            admet_confidence = 0.5
+        
+        # Update state confidence
+        if state.get("confidence") is None:
+            state["confidence"] = {}
+        state["confidence"]["admet"] = admet_confidence
+        
+        return {
+            "admet_profiles": profiles,
+            "toxicophore_highlights": highlights,
+            "admet_confidence": admet_confidence,
+        }

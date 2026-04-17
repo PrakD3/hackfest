@@ -1,13 +1,24 @@
-"""Dual-docks top 5 leads against off-target proteins. Selectivity ratio = |target| / |off_target|."""
+"""Dual-docks top leads: mutant vs wildtype. Selectivity = affinity_delta (ΔΔG)."""
 
 import hashlib
 
 
 class SelectivityAgent:
     """
-    Dual-docks top 5 leads against gene-specific off-target protein.
-    selectivity_ratio = abs(target_affinity) / abs(off_target_affinity)
-    > 3.0 = High, 2.0-3.0 = Moderate, 1.0-2.0 = Low, < 1.0 = Dangerous.
+    Computes selectivity using mutant vs wildtype binding affinity comparison (ΔΔG).
+    If dual docking data available, uses affinity_delta.
+    Otherwise, falls back to off-target protein comparison.
+    """
+
+    # Uncertainty for selectivity comparisons
+    UNCERTAINTY_RANGES = {
+        "wildtype_comparison": 1.8,  # Same as docking method
+        "off_target": 2.5,           # Higher for off-target (mocked)
+    }
+    """
+    Computes selectivity using mutant vs wildtype binding affinity comparison (ΔΔG).
+    If dual docking data available, uses affinity_delta.
+    Otherwise, falls back to off-target protein comparison.
     """
 
     OFF_TARGET_MAP = {
@@ -74,35 +85,86 @@ class SelectivityAgent:
 
         ctx = state.get("mutation_context") or {}
         gene = (ctx.get("gene") or "DEFAULT").upper()
-        off_target = self.OFF_TARGET_MAP.get(gene, self.OFF_TARGET_MAP["DEFAULT"])
-
-        top_5 = sorted(docking_results, key=lambda x: x.get("binding_energy", 0))[:5]
+        
+        # Check if we have dual docking data (mutant vs wildtype)
+        has_dual_docking = state.get("dual_docking", False)
+        
+        top_compounds = sorted(docking_results, key=lambda x: x.get("binding_energy", 0))[:30]
         results = []
-        for mol in top_5:
-            target_aff = mol.get("binding_energy", -8.0)
-            off_aff = await self._score_off_target(mol["smiles"], off_target)
-            ratio = abs(target_aff) / abs(off_aff) if off_aff != 0 else 1.0
-            results.append(
-                {
-                    "smiles": mol["smiles"],
-                    "target_affinity": target_aff,
-                    "off_target_affinity": off_aff,
-                    "off_target_pdb": off_target["pdb_id"],
-                    "off_target_name": off_target["protein_name"],
-                    "selectivity_ratio": round(ratio, 3),
-                    "selective": ratio >= 2.0,
-                    "selectivity_label": (
-                        "High"
-                        if ratio >= 3.0
-                        else "Moderate"
-                        if ratio >= 2.0
-                        else "Low"
-                        if ratio >= 1.0
-                        else "Dangerous"
-                    ),
-                }
-            )
-        return {"selectivity_results": results}
+        
+        if has_dual_docking:
+            # Use WT vs mutant comparison
+            for mol in top_compounds:
+                mut_aff = mol.get("binding_energy", -8.0)
+                wt_aff = mol.get("wt_binding_energy")
+                affinity_delta = mol.get("affinity_delta")
+                
+                if wt_aff is not None and affinity_delta is not None:
+                    # Calculate selectivity fold-change from ΔΔG
+                    # ΔΔG ≈ -1.36 kcal/mol = 10-fold difference at 298K
+                    fold_change = 10 ** (affinity_delta / 1.36) if affinity_delta != 0 else 1.0
+                    selectivity_score = abs(affinity_delta)
+                    
+                    results.append({
+                        "smiles": mol["smiles"],
+                        "mutant_affinity": mut_aff,
+                        "wildtype_affinity": wt_aff,
+                        "affinity_delta": affinity_delta,
+                        "fold_selectivity": round(fold_change, 2),
+                        "selectivity_score": round(selectivity_score, 2),
+                        "selective": affinity_delta < -0.68,  # 5-fold selectivity threshold
+                        "selectivity_label": (
+                            "High selective"
+                            if affinity_delta < -1.36  # 10-fold
+                            else "Selective"
+                            if affinity_delta < -0.68  # 5-fold
+                            else "Moderate"
+                            if affinity_delta < 0  # Mutant better
+                            else "Non-selective"
+                        ),
+                        "comparison_type": "wildtype",
+                    })
+        else:
+            # Fall back to off-target comparison (previous behavior)
+            off_target = self.OFF_TARGET_MAP.get(gene, self.OFF_TARGET_MAP["DEFAULT"])
+            
+            for mol in top_compounds:
+                target_aff = mol.get("binding_energy", -8.0)
+                off_aff = await self._score_off_target(mol["smiles"], off_target)
+                ratio = abs(target_aff) / abs(off_aff) if off_aff != 0 else 1.0
+                results.append(
+                    {
+                        "smiles": mol["smiles"],
+                        "target_affinity": target_aff,
+                        "off_target_affinity": off_aff,
+                        "off_target_pdb": off_target["pdb_id"],
+                        "off_target_name": off_target["protein_name"],
+                        "selectivity_ratio": round(ratio, 3),
+                        "selective": ratio >= 2.0,
+                        "selectivity_label": (
+                            "High"
+                            if ratio >= 3.0
+                            else "Moderate"
+                            if ratio >= 2.0
+                            else "Low"
+                            if ratio >= 1.0
+                            else "Dangerous"
+                        ),
+                        "comparison_type": "off_target",
+                    }
+                )
+        
+        # Update selectivity confidence in state
+        if state.get("confidence") is None:
+            state["confidence"] = {}
+        
+        state["confidence"]["selectivity"] = 0.8 if has_dual_docking else 0.5
+        
+        return {
+            "selectivity_results": results,
+            "selectivity_method": "wildtype_comparison" if has_dual_docking else "off_target",
+            "has_dual_docking": has_dual_docking,
+        }
 
     async def _score_off_target(self, smiles: str, off_target: dict) -> float:
         h = int(
@@ -110,3 +172,13 @@ class SelectivityAgent:
             16,
         )
         return -(5.0 + (h % 25) / 10.0)
+
+    def _format_energy(self, energy: float, method: str = "vina") -> str:
+        """Format binding energy with uncertainty range."""
+        uncertainty = self.UNCERTAINTY_RANGES.get("wildtype_comparison", 1.8) if method == "wt" else 1.8
+        return f"{energy:.1f} ± {uncertainty:.1f} kcal/mol"
+
+    def _format_delta(self, delta: float) -> str:
+        """Format ΔΔG with uncertainty."""
+        uncertainty = self.UNCERTAINTY_RANGES.get("wildtype_comparison", 1.8)
+        return f"{delta:.1f} ± {uncertainty:.1f} kcal/mol (ΔΔG)"

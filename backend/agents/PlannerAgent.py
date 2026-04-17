@@ -50,4 +50,17 @@ class PlannerAgent:
             plan = AnalysisPlan()
             actual_mode = PipelineMode.FULL
 
-        return {"analysis_plan": plan, "mode": actual_mode}
+        # Initialize confidence tracking object
+        confidence = {
+            "structure": 1.0,      # pLDDT-based (StructurePrepAgent)
+            "docking": 1.0,        # Vina/Gnina/hash based (DockingAgent)
+            "selectivity": 1.0,    # WT vs mutant or off-target (SelectivityAgent)
+            "admet": 1.0,          # RDKit-based property filtering (ADMETAgent)
+            "final": 1.0,          # Minimum of all above
+        }
+        
+        return {
+            "analysis_plan": plan,
+            "mode": actual_mode,
+            "confidence": confidence,
+        }
