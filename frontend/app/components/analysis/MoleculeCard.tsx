@@ -1,13 +1,13 @@
 "use client";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertTriangle, ShieldCheck, ShieldX, Zap } from "lucide-react";
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Badge } from "@/app/components/ui/badge";
+import { Switch } from "@/app/components/ui/switch";
 import type { RankedLead } from "@/app/lib/types";
-import { SelectivityBadge } from "./SelectivityBadge";
 import { MoleculeViewer2D } from "./MoleculeViewer2D";
 import { MoleculeViewer3D } from "./MoleculeViewer3D";
-import { Switch } from "@/app/components/ui/switch";
-import { Badge } from "@/app/components/ui/badge";
-import { AlertTriangle, ShieldCheck, ShieldX, Zap } from "lucide-react";
+import { SelectivityBadge } from "./SelectivityBadge";
 
 interface Props {
   lead: RankedLead & {
@@ -31,15 +31,15 @@ export function MoleculeCard({ lead, rank, pdbId }: Props) {
   const gnnScore = lead.gnn_dg ?? lead.docking_score;
   const scoreColor =
     gnnScore !== null && gnnScore <= -9
-      ? "#059669"
+      ? "var(--stability-stable)"
       : gnnScore !== null && gnnScore <= -7
-        ? "#d97706"
-        : "#dc2626";
+        ? "var(--stability-borderline)"
+        : "var(--stability-unstable)";
 
-  const getStabilityColor = (label?: string): string => {
-    if (label === "STABLE") return "#059669";
-    if (label === "BORDERLINE") return "#d97706";
-    return "#dc2626";
+  const _getStabilityColor = (label?: string): string => {
+    if (label === "STABLE") return "var(--stability-stable)";
+    if (label === "BORDERLINE") return "var(--stability-borderline)";
+    return "var(--stability-unstable)";
   };
 
   return (
@@ -61,8 +61,8 @@ export function MoleculeCard({ lead, rank, pdbId }: Props) {
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--muted-foreground)]">GNN ΔG</span>
             <span className="font-mono font-bold" style={{ color: scoreColor }}>
-              {lead.gnn_dg.toFixed(1)} {lead.gnn_uncertainty ? `± ${lead.gnn_uncertainty.toFixed(1)}` : ""}{" "}
-              kcal/mol
+              {lead.gnn_dg.toFixed(1)}{" "}
+              {lead.gnn_uncertainty ? `± ${lead.gnn_uncertainty.toFixed(1)}` : ""} kcal/mol
             </span>
           </div>
         )}
@@ -134,7 +134,8 @@ export function MoleculeCard({ lead, rank, pdbId }: Props) {
           <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
             <span className="text-[var(--muted-foreground)]">Synthesis</span>
             <span className="font-mono font-bold">
-              SA {lead.sa_score.toFixed(1)} • {lead.synthesis_steps ? `${lead.synthesis_steps} steps` : "N/A"}
+              SA {lead.sa_score.toFixed(1)} •{" "}
+              {lead.synthesis_steps ? `${lead.synthesis_steps} steps` : "N/A"}
               {lead.synthesis_cost && ` • ${lead.synthesis_cost}`}
             </span>
           </div>

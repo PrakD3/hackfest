@@ -1,5 +1,5 @@
-import { cn } from "@/app/lib/utils";
 import type { HTMLAttributes } from "react";
+import { cn } from "@/app/lib/utils";
 
 interface SeparatorProps extends HTMLAttributes<HTMLDivElement> {
   orientation?: "horizontal" | "vertical";

@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
-  EvolutionTree as EvolutionTreeType,
-  EvolutionNode,
   EvolutionEdge,
+  EvolutionNode,
+  EvolutionTree as EvolutionTreeType,
 } from "@/app/lib/types";
 
 interface Props {
@@ -21,20 +21,20 @@ interface SvgPath {
 }
 
 function scoreColor(score: number): string {
-  if (score <= -9) return "#10b981";
-  if (score <= -7) return "#3b82f6";
-  if (score <= -5) return "#f59e0b";
-  return "#ef4444";
+  if (score <= -9) return "var(--affinity-excellent)";
+  if (score <= -7) return "var(--affinity-good)";
+  if (score <= -5) return "var(--affinity-moderate)";
+  return "var(--affinity-poor)";
 }
 
 const METHOD_COLOR: Record<string, string> = {
-  scaffold_hop: "#8b5cf6",
-  bioisostere: "#06b6d4",
-  fragment_link: "#f97316",
-  ring_expand: "#84cc16",
-  ring_contract: "#eab308",
-  substituent: "#ec4899",
-  seed: "#6b7280",
+  scaffold_hop: "var(--color-info)",
+  bioisostere: "var(--color-warning)",
+  fragment_link: "var(--affinity-moderate)",
+  ring_expand: "var(--stability-stable)",
+  ring_contract: "var(--stability-borderline)",
+  substituent: "var(--color-danger)",
+  seed: "var(--muted-foreground)",
 };
 
 function methodColor(method: string): string {
@@ -48,21 +48,18 @@ export function EvolutionTree({ tree }: Props) {
   const [svgSize, setSvgSize] = useState({ w: 0, h: 0 });
 
   // Group nodes by generation
-  const nodesByGen = (tree?.nodes ?? []).reduce<Record<number, EvolutionNode[]>>(
-    (acc, node) => {
-      const g = node.generation;
-      if (!acc[g]) acc[g] = [];
-      acc[g].push(node);
-      return acc;
-    },
-    {}
-  );
+  const nodesByGen = (tree?.nodes ?? []).reduce<Record<number, EvolutionNode[]>>((acc, node) => {
+    const g = node.generation;
+    if (!acc[g]) acc[g] = [];
+    acc[g].push(node);
+    return acc;
+  }, {});
   const generations = Object.keys(nodesByGen)
     .map(Number)
     .sort((a, b) => a - b);
 
   const recalcPaths = useCallback(() => {
-    if (!containerRef.current || !(tree?.edges?.length)) return;
+    if (!containerRef.current || !tree?.edges?.length) return;
 
     const containerRect = containerRef.current.getBoundingClientRect();
 
@@ -102,7 +99,7 @@ export function EvolutionTree({ tree }: Props) {
       paths.push({
         id: `${edge.from_id}--${edge.to_id}`,
         d: `M ${x1} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}`,
-        color: edge.delta_score < 0 ? "#10b981" : "#ef4444",
+        color: edge.delta_score < 0 ? "var(--stability-stable)" : "var(--stability-unstable)",
         dashed: edge.delta_score >= 0,
         label: edge.operation,
         delta: edge.delta_score,
@@ -134,10 +131,7 @@ export function EvolutionTree({ tree }: Props) {
   return (
     <div className="overflow-x-auto p-4">
       {/* Scrollable canvas */}
-      <div
-        ref={containerRef}
-        className="relative inline-flex gap-10 items-start min-w-max pb-2"
-      >
+      <div ref={containerRef} className="relative inline-flex gap-10 items-start min-w-max pb-2">
         {/* SVG edge layer */}
         <svg
           className="absolute inset-0 pointer-events-none overflow-visible"
@@ -154,7 +148,7 @@ export function EvolutionTree({ tree }: Props) {
               refY="2"
               orient="auto"
             >
-              <polygon points="0 0, 6 2, 0 4" fill="#10b981" opacity="0.75" />
+              <polygon points="0 0, 6 2, 0 4" fill="var(--stability-stable)" opacity="0.75" />
             </marker>
             <marker
               id="evo-arrow-red"
@@ -164,7 +158,7 @@ export function EvolutionTree({ tree }: Props) {
               refY="2"
               orient="auto"
             >
-              <polygon points="0 0, 6 2, 0 4" fill="#ef4444" opacity="0.75" />
+              <polygon points="0 0, 6 2, 0 4" fill="var(--stability-unstable)" opacity="0.75" />
             </marker>
           </defs>
 
@@ -201,8 +195,8 @@ export function EvolutionTree({ tree }: Props) {
                 style={{
                   background: "var(--card)",
                   borderColor: node.admet_pass
-                    ? "color-mix(in srgb, #10b981 35%, var(--border))"
-                    : "color-mix(in srgb, #ef4444 28%, var(--border))",
+                    ? "color-mix(in srgb, var(--stability-stable) 35%, var(--border))"
+                    : "color-mix(in srgb, var(--stability-unstable) 28%, var(--border))",
                 }}
               >
                 {/* Score + ADMET row */}
@@ -219,8 +213,12 @@ export function EvolutionTree({ tree }: Props) {
                   <span
                     className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
                     style={{
-                      background: node.admet_pass ? "#10b98118" : "#ef444418",
-                      color: node.admet_pass ? "#10b981" : "#ef4444",
+                      background: node.admet_pass
+                        ? "color-mix(in srgb, var(--stability-stable) 10%, transparent)"
+                        : "color-mix(in srgb, var(--stability-unstable) 10%, transparent)",
+                      color: node.admet_pass
+                        ? "var(--stability-stable)"
+                        : "var(--stability-unstable)",
                     }}
                   >
                     {node.admet_pass ? "ADMET ✓" : "ADMET ✗"}
@@ -232,9 +230,7 @@ export function EvolutionTree({ tree }: Props) {
                   className="font-mono text-[10px] text-[var(--muted-foreground)] truncate"
                   title={node.smiles}
                 >
-                  {node.smiles.length > 28
-                    ? `${node.smiles.slice(0, 28)}…`
-                    : node.smiles}
+                  {node.smiles.length > 28 ? `${node.smiles.slice(0, 28)}…` : node.smiles}
                 </p>
 
                 {/* Method pill */}
@@ -259,7 +255,7 @@ export function EvolutionTree({ tree }: Props) {
 
         <span className="flex items-center gap-1.5">
           <svg width="20" height="8" aria-hidden="true">
-            <line x1="0" y1="4" x2="20" y2="4" stroke="#10b981" strokeWidth="1.5" />
+            <line x1="0" y1="4" x2="20" y2="4" stroke="var(--stability-stable)" strokeWidth="1.5" />
           </svg>
           Improved
         </span>
@@ -270,7 +266,7 @@ export function EvolutionTree({ tree }: Props) {
               y1="4"
               x2="20"
               y2="4"
-              stroke="#ef4444"
+              stroke="var(--stability-unstable)"
               strokeWidth="1.5"
               strokeDasharray="4 3"
             />

@@ -1,14 +1,9 @@
 "use client";
-import { ThemeCustomizer } from "@/app/components/settings/ThemeCustomizer";
-import { PipelineSettings } from "@/app/components/settings/PipelineSettings";
+import { Key, Palette, Sliders } from "lucide-react";
 import { APIKeyChecker } from "@/app/components/settings/APIKeyChecker";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/app/components/ui/tabs";
-import { Palette, Sliders, Key } from "lucide-react";
+import { PipelineSettings } from "@/app/components/settings/PipelineSettings";
+import { ThemeCustomizer } from "@/app/components/settings/ThemeCustomizer";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 
 export default function SettingsPage() {
   return (

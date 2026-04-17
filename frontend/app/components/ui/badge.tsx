@@ -1,4 +1,4 @@
-import { type VariantProps, cva } from "class-variance-authority";
+import { cva, type VariantProps } from "class-variance-authority";
 import type { HTMLAttributes } from "react";
 import { cn } from "@/app/lib/utils";
 
@@ -9,7 +9,8 @@ const badgeVariants = cva(
       variant: {
         default: "border-transparent bg-[var(--primary)] text-[var(--primary-foreground)]",
         secondary: "border-transparent bg-[var(--secondary)] text-[var(--secondary-foreground)]",
-        destructive: "border-transparent bg-[var(--destructive)] text-[var(--destructive-foreground)]",
+        destructive:
+          "border-transparent bg-[var(--destructive)] text-[var(--destructive-foreground)]",
         outline: "text-[var(--foreground)]",
         success: "border-transparent bg-emerald-100 text-emerald-800",
         warning: "border-transparent bg-amber-100 text-amber-800",

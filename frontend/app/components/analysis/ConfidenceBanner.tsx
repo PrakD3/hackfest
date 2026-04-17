@@ -47,9 +47,7 @@ export function ConfidenceBanner({
         <IconComponent size={20} className="mt-0.5 shrink-0" />
         <div className="flex-1">
           <h3 className="font-semibold mb-1">{config.label}</h3>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            {config.description}
-          </p>
+          <p className="text-sm text-[var(--muted-foreground)]">{config.description}</p>
         </div>
       </div>
 
@@ -57,9 +55,7 @@ export function ConfidenceBanner({
         <div className="space-y-2 pt-2 border-t border-[var(--border)]/50">
           {plddt !== undefined && (
             <div className="flex items-center justify-between text-sm">
-              <span className="text-[var(--muted-foreground)]">
-                Structure Confidence (pLDDT)
-              </span>
+              <span className="text-[var(--muted-foreground)]">Structure Confidence (pLDDT)</span>
               <Badge variant={plddt >= 90 ? "success" : plddt >= 70 ? "secondary" : "destructive"}>
                 {plddt.toFixed(1)}
               </Badge>
@@ -67,9 +63,7 @@ export function ConfidenceBanner({
           )}
           {esm1vScore !== undefined && esm1vLabel && (
             <div className="flex items-center justify-between text-sm">
-              <span className="text-[var(--muted-foreground)]">
-                Variant Effect (ESM-1v)
-              </span>
+              <span className="text-[var(--muted-foreground)]">Variant Effect (ESM-1v)</span>
               <Badge
                 variant={
                   esm1vLabel === "PATHOGENIC"

@@ -1,6 +1,6 @@
 "use client";
-import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle, Circle, AlertCircle, Loader2 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertCircle, CheckCircle, Circle, Loader2 } from "lucide-react";
 import type { AgentEvent } from "@/app/lib/types";
 
 const AGENTS = [
@@ -66,9 +66,7 @@ export function PipelineStatus({ events, isComplete, startTime }: Props) {
         {!isComplete && startTime && (
           <span className="text-xs text-[var(--muted-foreground)]">{elapsed}s</span>
         )}
-        {isComplete && (
-          <span className="text-xs text-emerald-600 font-medium">✓ Complete</span>
-        )}
+        {isComplete && <span className="text-xs text-emerald-600 font-medium">✓ Complete</span>}
       </div>
       <AnimatePresence>
         {AGENTS.map((agent) => {
@@ -86,22 +84,13 @@ export function PipelineStatus({ events, isComplete, startTime }: Props) {
                 <CheckCircle size={12} className="text-emerald-500 shrink-0" />
               )}
               {status === "running" && (
-                <Loader2
-                  size={12}
-                  className="text-[var(--primary)] shrink-0 animate-spin"
-                />
+                <Loader2 size={12} className="text-[var(--primary)] shrink-0 animate-spin" />
               )}
               {status === "error" && (
-                <AlertCircle
-                  size={12}
-                  className="text-[var(--destructive)] shrink-0"
-                />
+                <AlertCircle size={12} className="text-[var(--destructive)] shrink-0" />
               )}
               {status === "waiting" && (
-                <Circle
-                  size={12}
-                  className="text-[var(--muted-foreground)] shrink-0"
-                />
+                <Circle size={12} className="text-[var(--muted-foreground)] shrink-0" />
               )}
               <span
                 className={

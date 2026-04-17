@@ -1,13 +1,7 @@
 "use client";
-import type { ADMETProfile } from "@/app/lib/types";
+import { PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer } from "recharts";
 import { Badge } from "@/app/components/ui/badge";
-import {
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  Radar,
-  ResponsiveContainer,
-} from "recharts";
+import type { ADMETProfile } from "@/app/lib/types";
 
 interface Props {
   profiles: ADMETProfile[];
@@ -16,9 +10,7 @@ interface Props {
 export function ADMETPanel({ profiles }: Props) {
   if (!profiles.length) {
     return (
-      <div className="text-sm text-[var(--muted-foreground)] p-4">
-        No ADMET data available.
-      </div>
+      <div className="text-sm text-[var(--muted-foreground)] p-4">No ADMET data available.</div>
     );
   }
 
@@ -31,20 +23,15 @@ export function ADMETPanel({ profiles }: Props) {
     },
     {
       metric: "LogP",
-      value:
-        top.logp !== undefined
-          ? Math.min(100, ((top.logp + 2) / 9) * 100)
-          : 50,
+      value: top.logp !== undefined ? Math.min(100, ((top.logp + 2) / 9) * 100) : 50,
     },
     {
       metric: "HBD",
-      value:
-        top.hbd !== undefined ? Math.min(100, (1 - top.hbd / 5) * 100) : 100,
+      value: top.hbd !== undefined ? Math.min(100, (1 - top.hbd / 5) * 100) : 100,
     },
     {
       metric: "HBA",
-      value:
-        top.hba !== undefined ? Math.min(100, (1 - top.hba / 10) * 100) : 100,
+      value: top.hba !== undefined ? Math.min(100, (1 - top.hba / 10) * 100) : 100,
     },
     {
       metric: "Bioavail",
@@ -52,12 +39,7 @@ export function ADMETPanel({ profiles }: Props) {
     },
     {
       metric: "Solubility",
-      value:
-        top.solubility === "Good"
-          ? 90
-          : top.solubility === "Moderate"
-            ? 60
-            : 30,
+      value: top.solubility === "Good" ? 90 : top.solubility === "Moderate" ? 60 : 30,
     },
   ];
 

@@ -1,8 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Switch } from "@/app/components/ui/switch";
+import { useEffect, useState } from "react";
 import { Label } from "@/app/components/ui/label";
 import { Slider } from "@/app/components/ui/slider";
+import { Switch } from "@/app/components/ui/switch";
 
 interface Settings {
   runSelectivity: boolean;
@@ -50,18 +50,13 @@ export function PipelineSettings() {
       {TOGGLES.map(([key, label]) => (
         <div key={key} className="flex items-center justify-between">
           <Label htmlFor={key}>{label}</Label>
-          <Switch
-            id={key}
-            checked={s[key] as boolean}
-            onCheckedChange={(v) => update(key, v)}
-          />
+          <Switch id={key} checked={s[key] as boolean} onCheckedChange={(v) => update(key, v)} />
         </div>
       ))}
 
       <div className="space-y-2">
         <Label>
-          Max molecules to generate:{" "}
-          <strong>{s.maxMolecules}</strong>
+          Max molecules to generate: <strong>{s.maxMolecules}</strong>
         </Label>
         <Slider
           min={20}

@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from utils.db import init_db
+from utils.health_check import print_health_report
 import warnings
 import os
 
@@ -22,6 +23,8 @@ warnings.filterwarnings("ignore", message=".*normalization.*")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Run health check at startup
+    print_health_report()
     await init_db()
     yield
 

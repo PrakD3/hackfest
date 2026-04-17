@@ -1,8 +1,14 @@
-import { cn } from "@/app/lib/utils";
 import type { HTMLAttributes } from "react";
+import { cn } from "@/app/lib/utils";
 
 const Card = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)] shadow-sm", className)} {...props} />
+  <div
+    className={cn(
+      "rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)] shadow-sm",
+      className
+    )}
+    {...props}
+  />
 );
 
 const CardHeader = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => (
@@ -25,4 +31,4 @@ const CardFooter = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => 
   <div className={cn("flex items-center p-6 pt-0", className)} {...props} />
 );
 
-export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter };
+export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle };

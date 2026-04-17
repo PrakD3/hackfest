@@ -30,10 +30,10 @@ class MutationParserAgent:
         if not ctx:
             ctx = self._regex_extract(query)
             provider = provider or "regex"
-        curated = self._lookup_curated(ctx, query)
+        # NO CURATED FALLBACK - fetch everything from real APIs only
         return {
             "mutation_context": ctx,
-            "curated_profile": curated,
+            "curated_profile": None,  # Always None - force real API calls
             "llm_provider_used": provider or "unknown",
         }
 

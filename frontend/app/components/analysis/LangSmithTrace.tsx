@@ -1,7 +1,7 @@
 "use client";
-import type { PipelineMetrics } from "@/app/lib/types";
-import { ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { useState } from "react";
+import type { PipelineMetrics } from "@/app/lib/types";
 
 interface Props {
   runId: string | null;

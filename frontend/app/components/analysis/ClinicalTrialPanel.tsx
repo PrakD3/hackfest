@@ -1,7 +1,7 @@
 "use client";
-import type { ClinicalTrial } from "@/app/lib/types";
-import { Badge } from "@/app/components/ui/badge";
 import { ExternalLink } from "lucide-react";
+import { Badge } from "@/app/components/ui/badge";
+import type { ClinicalTrial } from "@/app/lib/types";
 
 interface Props {
   trials: ClinicalTrial[];
@@ -36,9 +36,7 @@ export function ClinicalTrialPanel({ trials }: Props) {
                 <Badge variant={t.status === "Recruiting" ? "default" : "outline"}>
                   {t.status}
                 </Badge>
-                <span className="text-xs font-mono text-[var(--muted-foreground)]">
-                  {t.nct_id}
-                </span>
+                <span className="text-xs font-mono text-[var(--muted-foreground)]">{t.nct_id}</span>
               </div>
               <p className="text-sm font-medium leading-snug">{t.title}</p>
               <p className="text-xs text-[var(--muted-foreground)] mt-1">

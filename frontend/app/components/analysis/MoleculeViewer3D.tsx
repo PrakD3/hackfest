@@ -1,7 +1,4 @@
-"use client";
-import { useEffect, useRef } from "react";
-import { useState } from "react";
-import type { Stage as NGLStage } from "ngl";
+import { useEffect, useRef, useState } from "react";
 
 interface Props {
   pdbId?: string;
@@ -10,7 +7,7 @@ interface Props {
 
 export function MoleculeViewer3D({ pdbId, className }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const stageRef = useRef<NGLStage | null>(null);
+  const stageRef = useRef<any>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,7 +24,8 @@ export function MoleculeViewer3D({ pdbId, className }: Props) {
         const pdbUrl = `https://files.rcsb.org/download/${pdbCode}.pdb`;
         stageRef.current
           .loadFile(pdbUrl, { ext: "pdb" })
-          .then((component) => {
+          .then((component: any) => {
+            if (!component) return;
             component.addRepresentation("cartoon", {
               color: "residueindex",
               opacity: 0.9,

@@ -1,4 +1,4 @@
-import { type VariantProps, cva } from "class-variance-authority";
+import { cva, type VariantProps } from "class-variance-authority";
 import type { HTMLAttributes } from "react";
 import { cn } from "@/app/lib/utils";
 
@@ -8,7 +8,8 @@ const alertVariants = cva(
     variants: {
       variant: {
         default: "bg-[var(--background)] text-[var(--foreground)] border-[var(--border)]",
-        destructive: "border-[var(--destructive)]/50 text-[var(--destructive)] bg-[var(--destructive)]/10",
+        destructive:
+          "border-[var(--destructive)]/50 text-[var(--destructive)] bg-[var(--destructive)]/10",
         warning: "border-amber-500/50 text-amber-700 bg-amber-50",
         success: "border-emerald-500/50 text-emerald-700 bg-emerald-50",
       },
@@ -31,4 +32,4 @@ const AlertDescription = ({ className, ...props }: HTMLAttributes<HTMLParagraphE
   <div className={cn("text-sm [&_p]:leading-relaxed", className)} {...props} />
 );
 
-export { Alert, AlertTitle, AlertDescription };
+export { Alert, AlertDescription, AlertTitle };

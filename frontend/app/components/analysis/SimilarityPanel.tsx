@@ -7,9 +7,7 @@ interface Props {
 export function SimilarityPanel({ similarMolecules = [] }: Props) {
   if (!similarMolecules.length) {
     return (
-      <div className="text-sm text-[var(--muted-foreground)] p-4">
-        No similar molecules found.
-      </div>
+      <div className="text-sm text-[var(--muted-foreground)] p-4">No similar molecules found.</div>
     );
   }
 

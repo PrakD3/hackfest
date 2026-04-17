@@ -107,9 +107,8 @@ export default function ResearchPage() {
               Pipeline Design And Scientific Rationale
             </h1>
             <p className="text-base md:text-lg text-muted-foreground max-w-3xl mb-8">
-              This page contains the detailed research framework: model
-              capabilities, safety strategy, and how each stage contributes to
-              ranked lead recommendations.
+              This page contains the detailed research framework: model capabilities, safety
+              strategy, and how each stage contributes to ranked lead recommendations.
             </p>
             <div className="max-w-3xl mb-6">
               <div className="flex gap-3 mb-4">
@@ -203,29 +202,19 @@ export default function ResearchPage() {
                     className="w-10 h-10 rounded-lg flex items-center justify-center mb-4"
                     style={{ background: "var(--accent)" }}
                   >
-                    <Icon
-                      className="w-5 h-5"
-                      style={{ color: "var(--primary)" }}
-                    />
+                    <Icon className="w-5 h-5" style={{ color: "var(--primary)" }} />
                   </div>
                   <h3 className="font-semibold mb-2">{title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {desc}
-                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
                 </article>
               ))}
             </div>
           </div>
         </section>
 
-        <section
-          className="py-16 px-6 md:px-16"
-          style={{ background: "var(--muted)" }}
-        >
+        <section className="py-16 px-6 md:px-16" style={{ background: "var(--muted)" }}>
           <div className="max-w-5xl mx-auto">
-            <h2 className="text-3xl font-bold mb-10 text-center">
-              Research Flow
-            </h2>
+            <h2 className="text-3xl font-bold mb-10 text-center">Research Flow</h2>
             <div className="grid md:grid-cols-3 gap-8">
               {STEPS.map((step) => (
                 <article

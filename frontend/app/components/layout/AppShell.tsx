@@ -1,16 +1,10 @@
 "use client";
 
-import {
-  CircleUser,
-  Dna,
-  FlaskConical,
-  Home,
-  Settings,
-  Sparkles,
-} from "lucide-react";
+import { CircleUser, Dna, FlaskConical, Home, Settings, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, type ReactNode, useEffect, useState } from "react";
+import { AMBER_MINIMAL, applyTheme, getSavedTheme } from "@/app/lib/theme";
 import {
   Sidebar,
   SidebarContent,
@@ -24,7 +18,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { AMBER_MINIMAL, applyTheme, getSavedTheme } from "@/app/lib/theme";
 import { ContentPanel } from "./ContentPanel";
 import { SiteFooter } from "./SiteFooter";
 
@@ -41,9 +34,7 @@ interface MainbarShellProps {
   borderless?: boolean;
 }
 
-export const ScrollContainerContext = createContext<HTMLDivElement | null>(
-  null,
-);
+export const ScrollContainerContext = createContext<HTMLDivElement | null>(null);
 
 function SidebarShell({ children }: { children?: ReactNode }) {
   const pathname = usePathname();
@@ -59,13 +50,7 @@ function SidebarShell({ children }: { children?: ReactNode }) {
   );
 }
 
-function SidebarShellContent({
-  children,
-  pathname,
-}: {
-  children?: ReactNode;
-  pathname: string;
-}) {
+function SidebarShellContent({ children, pathname }: { children?: ReactNode; pathname: string }) {
   const { toggleSidebar } = useSidebar();
 
   return (
@@ -85,12 +70,8 @@ function SidebarShellContent({
                     <Dna size={16} />
                   </div>
                   <div className="group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-semibold leading-none">
-                      Drug Discovery AI
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Research Workspace
-                    </p>
+                    <p className="text-sm font-semibold leading-none">Drug Discovery AI</p>
+                    <p className="text-xs text-muted-foreground mt-1">Research Workspace</p>
                   </div>
                 </button>
               </SidebarMenuButton>

@@ -45,10 +45,32 @@
   --chart-4: #65656f;
   --chart-5: #484852;
 
+  /* Selectivity colors */
   --selectivity-high: #059669;
   --selectivity-moderate: #d97706;
   --selectivity-low: #f59e0b;
   --selectivity-dangerous: #dc2626;
+
+  /* Stability colors */
+  --stability-stable: #10b981;
+  --stability-borderline: #f59e0b;
+  --stability-unstable: #ef4444;
+
+  /* Affinity score colors */
+  --affinity-excellent: #10b981;
+  --affinity-good: #3b82f6;
+  --affinity-moderate: #f59e0b;
+  --affinity-poor: #ef4444;
+
+  /* Semantic colors */
+  --color-success: #10b981;
+  --color-success-fg: #ffffff;
+  --color-warning: #f59e0b;
+  --color-warning-fg: #ffffff;
+  --color-danger: #ef4444;
+  --color-danger-fg: #ffffff;
+  --color-info: #3b82f6;
+  --color-info-fg: #ffffff;
 }
 
 @theme inline {
