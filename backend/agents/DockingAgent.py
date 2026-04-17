@@ -10,53 +10,6 @@ import tempfile
 from utils.logger import get_logger
 
 
-def _create_pdbqt_fallback(pdb_path: str, pdbqt_path: str) -> None:
-    """
-    Fallback PDBQT converter (proper format, no manual string manipulation).
-    Extracts ATOM/HETATM lines and appends charge field at correct position (cols 77-78).
-    Works on Windows & Linux/WSL.
-    """
-    with open(pdb_path, "r") as f:
-        pdb_lines = f.readlines()
-    
-    pdbqt_lines = []
-    for line in pdb_lines:
-        if line.startswith("ATOM") or line.startswith("HETATM"):
-            # PDB format = 80 chars; PDBQT needs charge at columns 77-78 (0-indexed: 76-77)
-            # Extract the ATOM/HETATM line up to column 76
-            if len(line) >= 76:
-                # Keep original line up to 76, add 2-char charge field, keep rest
-                pdbqt_line = line[:76] + " 0" + line[78:] if len(line) > 78 else line[:76] + " 0\n"
-            else:
-                # Line too short, just append charge
-                pdbqt_line = line.rstrip() + " 0\n"
-            pdbqt_lines.append(pdbqt_line)
-    
-    pdbqt_lines.append("END\n")
-    
-    with open(pdbqt_path, "w") as f:
-        f.writelines(pdbqt_lines)
-
-
-def _clean_pdbqt(pdbqt_path: str) -> None:
-    """
-    Remove obabel-generated meta records (ROOT, TORSDOF, REMARK, etc.) that Vina rejects.
-    Keep only ATOM, HETATM, and END lines.
-    """
-    with open(pdbqt_path, "r") as f:
-        lines = f.readlines()
-    
-    # Keep only ATOM, HETATM, and END records
-    clean_lines = [line for line in lines if line.startswith(("ATOM", "HETATM", "END"))]
-    
-    # Ensure END is present
-    if not any(line.startswith("END") for line in clean_lines):
-        clean_lines.append("END\n")
-    
-    with open(pdbqt_path, "w") as f:
-        f.writelines(clean_lines)
-
-
 class DockingAgent:
     """Docks generated molecules vs. binding pocket."""
 
@@ -104,15 +57,15 @@ class DockingAgent:
         # Check for tools: first try shutil.which(), then hardcoded paths
         import os
         has_gnina = shutil.which("gnina") is not None
-        has_vina = False  # Disable Vina on Windows (PDBQT format incompatibility)
+        has_vina = shutil.which("vina") is not None or os.path.exists(r"C:\tools\vina.exe")
         has_openbabel = shutil.which("obabel") is not None
-        mode = "gnina" if has_gnina else "ai_fallback"  # Force computational fallback
+        mode = "gnina" if has_gnina else ("vina" if has_vina else "ai_fallback")
         
-        log.info(f"Docking mode detection: has_gnina={has_gnina}, has_vina={has_vina}, mode={mode} (Windows using computational docking)")
+        log.info(f"Docking mode detection: has_gnina={has_gnina}, has_vina={has_vina}, mode={mode}")
         
-        if mode == "ai_fallback":
-            # No real docking tools available - use computational fallback
-            log.warning("⚠️  Using computational docking (hash-based scoring)")
+        if not has_vina and not has_gnina:
+            # No docking tools available
+            log.warning("⚠️  Neither Vina nor Gnina available - using computational fallback")
         
         # Track warnings in state
         warnings = []
@@ -246,19 +199,24 @@ class DockingAgent:
                 with open(pdb_path, "w") as f:
                     f.write(pdb_content)
                 
-                # Prepare PDBQT file
-                pdbqt_path = os.path.join(tmpdir, f"{struct_name}.pdbqt")
-                import subprocess
-                result = subprocess.run(
-                    ["meeko", "-i", pdb_path, "-o", pdbqt_path],
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
-                )
-                
-                if result.returncode != 0:
-                    # Fallback to hash if conversion fails
-                    return self._ai_score(smiles, struct_name, "wildtype")
+                # Use Meeko Python API (proper way to prepare receptors for Vina on Windows)
+                try:
+                    from meeko import prepare_receptor
+                    pdbqt_path = os.path.join(tmpdir, f"{struct_name}.pdbqt")
+                    prepare_receptor(receptor_file=pdb_path, output_file=pdbqt_path)
+                except (ImportError, Exception):
+                    # Meeko not available - try obabel + cleanup
+                    pdbqt_path = os.path.join(tmpdir, f"{struct_name}.pdbqt")
+                    import subprocess
+                    result = subprocess.run(
+                        ["obabel", pdb_path, "-O", pdbqt_path, "-xp"],
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    if result.returncode != 0:
+                        return self._ai_score(smiles, struct_name, "wildtype")
+                    _clean_pdbqt(pdbqt_path)  # Remove ROOT/TORSDOF
                 
                 # Dock molecule to this structure
                 return await self._vina_dock_to_receptor(smiles, pocket, pdbqt_path, mode)
@@ -310,52 +268,54 @@ class DockingAgent:
             sdf_path = os.path.join(tmpdir, "ligand.sdf")
             pdbqt_path = os.path.join(tmpdir, "ligand.pdbqt")
             out_path = os.path.join(tmpdir, "docked.pdbqt")
-            receptor_pdb = os.path.join(tmpdir, "receptor.pdb")
             
             writer = Chem.SDWriter(sdf_path)
             writer.write(mol)
             writer.close()
 
-            result = subprocess.run(
-                ["obabel", sdf_path, "-O", pdbqt_path, "--gen3d"],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-
-            if result.returncode != 0:
-                raise RuntimeError(f"obabel conversion failed: {result.stderr}")
-
-            # Write REAL PDB content to file
-            with open(receptor_pdb, "w") as f:
-                f.write(pdb_content)
-            
-            # **CRITICAL FIX #3**: Use obabel to convert PDB → PDBQT (handles format correctly)
-            # obabel is installed on both Windows and WSL2, processes atom types + charges properly
-            receptor_pdbqt = os.path.join(tmpdir, "receptor.pdbqt")
-            
+            # Use Meeko Python API for ligand (proper way)
             try:
-                # Call obabel with proper subprocess escaping (works on Windows & Linux/WSL)
+                from meeko import prepare_ligand
+                prepare_ligand(ligand_file=sdf_path, output_file=pdbqt_path)
+            except (ImportError, Exception):
+                # Meeko not available - use obabel
                 result = subprocess.run(
-                    ["obabel", receptor_pdb, "-O", receptor_pdbqt, "-xp"],  # -xp: polar hydrogens only
+                    ["obabel", sdf_path, "-O", pdbqt_path, "--gen3d"],
                     capture_output=True,
                     text=True,
                     timeout=30,
                 )
+                if result.returncode != 0:
+                    raise RuntimeError(f"Ligand conversion failed: {result.stderr}")
                 
-                if result.returncode == 0:
-                    # Clean obabel output: remove ROOT, TORSDOF, REMARK records
-                    _clean_pdbqt(receptor_pdbqt)
-                else:
-                    log_warn = get_logger(self.__class__.__name__)
-                    log_warn.warning(f"obabel PDBQT conversion: {result.stderr}")
-                    # Fallback: use basic PDBQT with proper charge format
+                # Clean ligand PDBQT file
+                _clean_pdbqt(pdbqt_path)
+
+            # Create receptor PDB file
+            receptor_pdb = os.path.join(tmpdir, "receptor.pdb")
+            with open(receptor_pdb, "w") as f:
+                f.write(pdb_content)
+            
+            # Prepare receptor PDBQT (try RDKit first, then fallbacks)
+            receptor_pdbqt = os.path.join(tmpdir, "receptor.pdbqt")
+            
+            # Try RDKit-based approach (produces clean PDBQT without ROOT/TORSDOF/BRANCH)
+            if not _create_pdbqt_from_pdb(pdb_content, receptor_pdbqt):
+                # RDKit failed - try obabel with cleanup
+                try:
+                    result = subprocess.run(
+                        ["obabel", receptor_pdb, "-O", receptor_pdbqt, "-xp"],
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    if result.returncode == 0:
+                        _clean_pdbqt(receptor_pdbqt)
+                    else:
+                        # obabel failed - use fallback
+                        _create_pdbqt_fallback(receptor_pdb, receptor_pdbqt)
+                except:
                     _create_pdbqt_fallback(receptor_pdb, receptor_pdbqt)
-                
-            except (FileNotFoundError, TimeoutError) as e:
-                log_err = get_logger(self.__class__.__name__)
-                log_err.warning(f"obabel not available ({e}), using fallback PDBQT")
-                _create_pdbqt_fallback(receptor_pdb, receptor_pdbqt)
             
             # Use full path to vina/gnina executable
             exe_name = mode
@@ -506,3 +466,122 @@ class DockingAgent:
         if energy <= -6:
             return "Moderate"
         return "Weak"
+
+
+def _create_pdbqt_from_pdb(pdb_content: str, pdbqt_path: str) -> bool:
+    """
+    Create a valid PDBQT file from PDB content using RDKit.
+    This produces clean, Vina-compatible PDBQT without ROOT/TORSDOF/BRANCH records.
+    Returns True if successful, False otherwise.
+    """
+    try:
+        from rdkit import Chem
+        import tempfile
+        import os
+        
+        # Write PDB to temp file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.pdb', delete=False) as f:
+            temp_pdb = f.name
+            f.write(pdb_content)
+        
+        try:
+            # Read PDB with RDKit
+            mol = Chem.MolFromPDBFile(temp_pdb, removeHs=False)
+            if mol is None:
+                return False
+            
+            # Write PDBQT with proper fixed-width formatting for Vina
+            conf = mol.GetConformer()
+            with open(pdbqt_path, 'w') as f:
+                f.write("REMARK PDBQT file generated from PDB\n")
+                
+                for atom_idx, atom in enumerate(mol.GetAtoms()):
+                    if atom_idx < conf.GetNumAtoms():
+                        pos = conf.GetAtomPosition(atom_idx)
+                        atom_sym = atom.GetSymbol()
+                        
+                        # Proper PDBQT format (Vina-compatible):
+                        # ATOM  serial name    resname chain resseq      x      y      z  q1  q2     type
+                        # Fixed-width columns matching Vina's parser
+                        line = (
+                            f"ATOM  {atom_idx+1:5d}  {atom_sym:<2s}  RES A   1    "
+                            f"{pos.x:8.3f}{pos.y:8.3f}{pos.z:8.3f}  0.00  0.00     0.00 {atom_sym}\n"
+                        )
+                        f.write(line)
+                
+                f.write("ENDMDL\n")
+            
+            return True
+        finally:
+            try:
+                os.unlink(temp_pdb)
+            except:
+                pass
+    except Exception:
+        return False
+
+
+def _clean_pdbqt(pdbqt_path: str) -> None:
+    """
+    Remove problematic records from PDBQT files generated by obabel/meeko.
+    Strips ROOT, TORSDOF, BRANCH, END records that Vina on Windows rejects.
+    """
+    try:
+        with open(pdbqt_path, "r") as f:
+            lines = f.readlines()
+        
+        # Filter out problematic lines
+        cleaned_lines = []
+        for line in lines:
+            # Skip ROOT, TORSDOF, BRANCH, END records
+            if any(line.startswith(tag) for tag in ["ROOT", "TORSDOF", "BRANCH", "END"]):
+                continue
+            # Skip REMARK lines about ROOT/TORSDOF
+            if line.startswith("REMARK") and any(tag in line for tag in ["ROOT", "TORSDOF", "BRANCH"]):
+                continue
+            cleaned_lines.append(line)
+        
+        with open(pdbqt_path, "w") as f:
+            f.writelines(cleaned_lines)
+    except Exception:
+        pass
+
+
+def _create_pdbqt_fallback(pdb_path: str, pdbqt_path: str) -> None:
+    """
+    Create a minimal valid PDBQT from a PDB file using simple parsing.
+    Used when obabel is unavailable or fails on Windows.
+    """
+    try:
+        with open(pdb_path, "r") as f:
+            pdb_lines = f.readlines()
+        
+        with open(pdbqt_path, "w") as f:
+            # Write minimal PDBQT header
+            f.write("REMARK PDBQT file\n")
+            
+            # Copy ATOM records from PDB, converting to PDBQT format
+            for line in pdb_lines:
+                if line.startswith("ATOM") or line.startswith("HETATM"):
+                    # Extract atom record fields (using fixed-width PDB format)
+                    try:
+                        serial = line[6:11].strip()
+                        atom_name = line[12:16].strip()
+                        res_name = line[17:20].strip()
+                        chain = line[21] if len(line) > 21 else "A"
+                        res_seq = line[22:26].strip()
+                        x = float(line[30:38])
+                        y = float(line[38:46])
+                        z = float(line[46:54])
+                        
+                        # Write as PDBQT ATOM record
+                        # Format: ATOM/HETATM serial name resname chain resseq x y z charge type
+                        atom_type = atom_name[0]  # Simple: use first character
+                        f.write(f"ATOM  {int(serial):5d} {atom_name:4s} {res_name:3s} {chain}{int(res_seq):4d}    {x:8.3f}{y:8.3f}{z:8.3f}  0.00  0.00    -0.00 {atom_type}\n")
+                    except (ValueError, IndexError):
+                        continue  # Skip malformed lines
+            
+            # Write end marker
+            f.write("ENDMDL\n")
+    except Exception:
+        pass  # If fallback fails, leave empty file
