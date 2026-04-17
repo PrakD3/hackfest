@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 import agents.OrchestratorAgent  # Import module, not variable
 
 from utils.db import get_discovery, list_discoveries, save_discovery
-from utils.session_manager import get_session as get_session_redis
+
 
 router = APIRouter()
 

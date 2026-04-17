@@ -27,7 +27,7 @@ os.environ.setdefault(
 )
 
 from pipeline.state import AgentStatus, PipelineMode
-from utils.session_manager import save_session as save_session_redis, get_session as get_session_redis
+
 
 # In-memory session store (for performance; Redis is used for persistence)
 _sessions: dict[str, dict] = {}
