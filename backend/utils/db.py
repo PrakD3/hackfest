@@ -4,6 +4,10 @@ import json
 import os
 import uuid
 
+# Load .env variables early
+from dotenv import load_dotenv
+load_dotenv()
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -16,6 +20,9 @@ def get_engine():
     url = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
     if not url.startswith("postgresql+asyncpg://"):
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    # Remove unsupported asyncpg parameters (sslmode, channel_binding)
+    url = url.split("?")[0]  # Remove query string
+    url += "?ssl=require"  # asyncpg uses ssl=require instead of sslmode=require
     return create_async_engine(url, echo=False)
 
 
@@ -25,6 +32,7 @@ async def init_db():
     if not engine:
         return
     async with engine.begin() as conn:
+        # Execute each CREATE TABLE statement separately
         await conn.execute(
             text("""
             CREATE TABLE IF NOT EXISTS discoveries (
@@ -39,14 +47,18 @@ async def init_db():
                 full_report JSONB,
                 langsmith_run_id TEXT,
                 created_at TIMESTAMPTZ DEFAULT NOW()
-            );
+            )
+        """)
+        )
+        await conn.execute(
+            text("""
             CREATE TABLE IF NOT EXISTS user_themes (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 name TEXT NOT NULL UNIQUE,
                 theme_json JSONB NOT NULL,
                 is_active BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMPTZ DEFAULT NOW()
-            );
+            )
         """)
         )
 

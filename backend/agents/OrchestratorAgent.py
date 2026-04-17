@@ -139,7 +139,7 @@ class OrchestratorAgent:
         _sessions[session_id] = state
         
         # Persist session to Redis for durability across restarts
-        await save_session_redis(session_id, state)
+
         await queue.put(
             {
                 "event": "pipeline_complete",
