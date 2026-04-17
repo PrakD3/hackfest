@@ -329,50 +329,69 @@ Extends shadcn/ui defaults with:
 - [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) — Design guidelines
 - [AGENTS.md](../AGENTS.md) — 22-agent pipeline architecture
 
-## 🚢 Deployment
+## � Hackathon Demo (24-Hour Timeline)
 
-### Vercel (Recommended)
+### LIVE DEMO (Next 4 Hours)
 
+**Before Judges Arrive:**
 ```bash
-# Connect repo + deploy
-git push origin main
+# Terminal 1: Backend
+cd backend
+python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
-# Dashboard: https://vercel.com/projects
+# Terminal 2: Frontend
+cd frontend
+npm run dev
+
+# Verify health
+curl http://localhost:8000/api/health
+curl http://localhost:3000
 ```
 
-### Docker
+**Demo Script (5 minutes):**
+1. Open http://localhost:3000
+2. Click "Open Research Workspace"
+3. Enter: `EGFR T790M`
+4. Click "Analyze"
+5. Watch agents execute (22 in real-time)
+6. After ~30 seconds, show final results
+7. Click "Export" → Download PDF
+8. Toggle dark mode (bottom right)
+9. Show mobile view (devtools F12 → 375px)
 
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY . .
-RUN npm install && npm run build
-EXPOSE 3000
-CMD ["npm", "start"]
-```
+### Post-Hackathon Deployment
 
-### Manual
-
+**For Judges/Mentors to Run Locally:**
 ```bash
+# Frontend
+cd frontend
 npm install
+npm run dev
+
+# Open http://localhost:3000
+# (assumes backend running on http://localhost:8000)
+```
+
+**For Production (Later):**
+```bash
+# Build
 npm run build
 npm run start
 
-# Visit http://localhost:3000
+# Or deploy to Vercel:
+git push origin main
 ```
 
-### Production Checklist
+### CRITICAL Checks Before Demo
 
-- [ ] API endpoint points to production backend
-- [ ] No console errors or warnings
-- [ ] Dark mode tested and visually correct
-- [ ] Mobile responsive on actual devices
-- [ ] Accessibility audit passed (Lighthouse)
-- [ ] Analytics configured (if needed)
-- [ ] Sentry/error tracking set up
-- [ ] Database backups configured
-- [ ] HTTPS certificate valid
-- [ ] Rate limiting configured
+- [ ] Backend running and responding
+- [ ] No console errors (F12 → Console tab)
+- [ ] All pages load (home, research, results, discoveries)
+- [ ] Molecules render (2D viewer)
+- [ ] Dark mode toggle works
+- [ ] Mobile layout responsive
+- [ ] Export buttons functional
+- [ ] Database saving discoveries
 
 ## 🤝 Contributing
 
