@@ -47,6 +47,7 @@ export function MoleculeCard({
 }: Props) {
   const [show3D, setShow3D] = useState(false);
   const [isViewerModalOpen, setIsViewerModalOpen] = useState(false);
+  const [isModal3D, setIsModal3D] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [rotationDeg, setRotationDeg] = useState(0);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -126,7 +127,10 @@ export function MoleculeCard({
           >
             <button
               type="button"
-              onClick={() => setIsViewerModalOpen(true)}
+              onClick={() => {
+                setIsModal3D(false);
+                setIsViewerModalOpen(true);
+              }}
               className="w-full text-left cursor-zoom-in"
               title="Open interactive molecule viewer"
             >
@@ -151,7 +155,10 @@ export function MoleculeCard({
           >
             <button
               type="button"
-              onClick={() => setIsViewerModalOpen(true)}
+              onClick={() => {
+                setIsModal3D(true);
+                setIsViewerModalOpen(true);
+              }}
               className="w-full text-left cursor-zoom-in"
               title="Open interactive molecule viewer"
             >
@@ -210,16 +217,22 @@ export function MoleculeCard({
           <DialogClose onClose={() => setIsViewerModalOpen(false)} />
           <DialogHeader className="mb-3">
             <DialogTitle>
-              {lead.compound_name} · {show3D ? "3D Viewer" : "2D Viewer"}
+              {lead.compound_name} · {isModal3D ? "3D Viewer" : "2D Viewer"}
             </DialogTitle>
+            <div className="flex items-center gap-2">
+              <Switch checked={isModal3D} onCheckedChange={setIsModal3D} />
+              <span className="text-xs text-[var(--muted-foreground)]">
+                {isModal3D ? "3D Viewer" : "2D Viewer"}
+              </span>
+            </div>
             <p className="text-xs text-[var(--muted-foreground)]">
-              {show3D
+              {isModal3D
                 ? "Mouse controls: drag to rotate, right-drag to pan, and scroll to zoom."
                 : "Drag to pan, scroll to zoom, and use rotate controls for orientation."}
             </p>
           </DialogHeader>
 
-          {!show3D ? (
+          {!isModal3D ? (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <button
@@ -367,4 +380,3 @@ export function MoleculeCard({
     </div>
   );
 }
->>>>>>> Stashed changes

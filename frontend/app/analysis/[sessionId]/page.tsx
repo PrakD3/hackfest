@@ -43,83 +43,6 @@ interface PageProps {
   params: Promise<{ sessionId: string }>;
 }
 
-type SelectivityTone = "high" | "moderate" | "low" | "danger";
-
-const CLINICAL_SELECTIVITY_THRESHOLDS = {
-  high: 10,
-  moderate: 3.2,
-  low: 1.5,
-} as const;
-
-function deriveClinicalSelectivityRow(entry: SelectivityResult): {
-  targetAffinity: number | null;
-  offTargetAffinity: number | null;
-  foldSelectivity: number | null;
-  label: string;
-  tone: SelectivityTone;
-} {
-  const data = entry as Record<string, unknown>;
-  const targetAffinity = [data.target_affinity, data.mutant_affinity].find(
-    (value): value is number => typeof value === "number"
-  ) ?? null;
-  const offTargetAffinity = [
-    data.off_target_affinity,
-    data.wildtype_affinity,
-    data.best_off_target_affinity,
-  ].find((value): value is number => typeof value === "number") ?? null;
-
-  let foldSelectivity: number | null = null;
-  if (typeof data.fold_selectivity === "number") {
-    foldSelectivity = data.fold_selectivity;
-  } else if (
-    typeof targetAffinity === "number" &&
-    typeof offTargetAffinity === "number" &&
-    offTargetAffinity !== 0
-  ) {
-    foldSelectivity = Math.abs(targetAffinity) / Math.abs(offTargetAffinity);
-  } else if (typeof data.selectivity_ratio === "number") {
-    foldSelectivity = data.selectivity_ratio;
-  }
-
-  if (typeof foldSelectivity === "number" && Number.isFinite(foldSelectivity)) {
-    if (foldSelectivity >= CLINICAL_SELECTIVITY_THRESHOLDS.high) {
-      return {
-        targetAffinity,
-        offTargetAffinity,
-        foldSelectivity,
-        label: "High selectivity",
-        tone: "high",
-      };
-    }
-    if (foldSelectivity >= CLINICAL_SELECTIVITY_THRESHOLDS.moderate) {
-      return {
-        targetAffinity,
-        offTargetAffinity,
-        foldSelectivity,
-        label: "Moderate selectivity",
-        tone: "moderate",
-      };
-    }
-    if (foldSelectivity >= CLINICAL_SELECTIVITY_THRESHOLDS.low) {
-      return {
-        targetAffinity,
-        offTargetAffinity,
-        foldSelectivity,
-        label: "Low selectivity",
-        tone: "low",
-      };
-    }
-  }
-
-  return {
-    targetAffinity,
-    offTargetAffinity,
-    foldSelectivity,
-    label: "Non-selective",
-    tone: "danger",
-  };
-}
-
 export default function AnalysisPage({ params }: PageProps) {
   const { sessionId } = use(params);
   const router = useRouter();
@@ -133,13 +56,26 @@ export default function AnalysisPage({ params }: PageProps) {
   const [isCancelling, setIsCancelling] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
   const startTimeRef = useRef(Date.now());
-  const MATRIX_COLS = 30;
-  const MATRIX_ROWS = 7;
+  const MATRIX_COLS = 52;
+  const MATRIX_ROWS = 10;
   const [matrixLevels, setMatrixLevels] = useState<number[]>(
     Array.from({ length: MATRIX_COLS }, () => 0.2)
   );
-  const ACTIVE_ANALYSIS_KEY = "dda-active-analysis";
+  const transitionPulseRef = useRef(0);
+  const transitionAnchorRef = useRef<number | null>(null);
+  const transitionDirectionRef = useRef(1);
+  const previousAgentRef = useRef<string | null>(null);
+  const rhythmPulseRef = useRef(0);
+  const previousCompletedAgentsRef = useRef(0);
+  const ACTIVE_ANALYSES_KEY = "dda-active-analyses";
+  const LEGACY_ACTIVE_ANALYSIS_KEY = "dda-active-analysis";
   const STOPPED_ANALYSIS_KEY = "dda-stopped-analyses";
+  type ActiveAnalysisRecord = {
+    sessionId: string;
+    query?: string;
+    diseaseName?: string;
+    startedAt?: number;
+  };
 
   const readStoppedSessions = () => {
     if (typeof window === "undefined") return [] as string[];
@@ -151,6 +87,49 @@ export default function AnalysisPage({ params }: PageProps) {
     } catch {
       return [] as string[];
     }
+  };
+
+  const readActiveAnalyses = (): ActiveAnalysisRecord[] => {
+    if (typeof window === "undefined") return [];
+    const stored = localStorage.getItem(ACTIVE_ANALYSES_KEY);
+    if (!stored) return [];
+    try {
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(
+        (item): item is ActiveAnalysisRecord =>
+          Boolean(item && typeof item.sessionId === "string")
+      );
+    } catch {
+      return [];
+    }
+  };
+
+  const writeActiveAnalyses = (items: ActiveAnalysisRecord[]) => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(ACTIVE_ANALYSES_KEY, JSON.stringify(items));
+  };
+
+  const upsertActiveAnalysis = (entry: ActiveAnalysisRecord) => {
+    const list = readActiveAnalyses();
+    const existing = list.find((item) => item.sessionId === entry.sessionId);
+    const merged: ActiveAnalysisRecord = {
+      sessionId: entry.sessionId,
+      query: entry.query ?? existing?.query,
+      diseaseName: entry.diseaseName ?? existing?.diseaseName,
+      startedAt: entry.startedAt ?? existing?.startedAt ?? Date.now(),
+    };
+    const next = [
+      merged,
+      ...list.filter((item) => item.sessionId !== entry.sessionId),
+    ].sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0));
+    writeActiveAnalyses(next);
+  };
+
+  const removeActiveAnalysis = (session: string) => {
+    const list = readActiveAnalyses();
+    const next = list.filter((item) => item.sessionId !== session);
+    writeActiveAnalyses(next);
   };
 
   const writeStoppedSessions = (sessions: string[]) => {
@@ -204,6 +183,25 @@ export default function AnalysisPage({ params }: PageProps) {
     ? currentAgent.slice(0, -5)
     : currentAgent;
 
+  useEffect(() => {
+    if (!currentAgentId) return;
+    if (previousAgentRef.current && previousAgentRef.current !== currentAgentId) {
+      transitionPulseRef.current = 1;
+      rhythmPulseRef.current = 1;
+      transitionAnchorRef.current = Math.floor(Math.random() * MATRIX_COLS);
+      transitionDirectionRef.current = Math.random() > 0.5 ? 1 : -1;
+    }
+    previousAgentRef.current = currentAgentId;
+  }, [currentAgentId, MATRIX_COLS]);
+
+  useEffect(() => {
+    if (completedAgents > previousCompletedAgentsRef.current) {
+      // Subtle beat when a step completes.
+      rhythmPulseRef.current = 1;
+    }
+    previousCompletedAgentsRef.current = completedAgents;
+  }, [completedAgents]);
+
   const agentMessages: Record<string, string> = {
     MutationParser: "Parsing mutation and validating query context.",
     Planner: "Building the execution plan for this run.",
@@ -249,10 +247,51 @@ export default function AnalysisPage({ params }: PageProps) {
           prev.map((_, idx) => {
             const wave = Math.sin(time / 220 + idx * 0.6) * 0.18;
             const jitter = Math.random() * 0.2;
+            const contour = Math.sin(time / 310 + idx * 0.22) * 0.08;
             const base = 0.12 + intensity * 0.55;
-            return Math.max(0.05, Math.min(1, base + wave + jitter));
+
+            const transitionPulse = transitionPulseRef.current;
+            const rhythmPulse = rhythmPulseRef.current;
+            let transitionBoost = 0;
+            let rhythmBoost = 0;
+
+            if (transitionPulse > 0.02 && transitionAnchorRef.current !== null) {
+              const sweepTravel = (1 - transitionPulse) * MATRIX_COLS * 0.8;
+              const sweepCenter =
+                transitionAnchorRef.current + sweepTravel * transitionDirectionRef.current;
+              const distance = Math.abs(idx - sweepCenter);
+              const sweep = Math.max(0, 1 - distance / 9) * 0.52;
+              const sparkle =
+                Math.random() < 0.08 * transitionPulse ? 0.2 + Math.random() * 0.26 : 0;
+              transitionBoost = (sweep + sparkle) * transitionPulse;
+            }
+
+            if (rhythmPulse > 0.02) {
+              // "Musicified" ripple bands moving across columns.
+              const beatPhase = time / 90 + idx * 0.34;
+              const beat = (Math.sin(beatPhase) + 1) / 2;
+              rhythmBoost = beat * 0.28 * rhythmPulse;
+            }
+
+            return Math.max(
+              0.05,
+              Math.min(1, base + wave + contour + jitter + transitionBoost + rhythmBoost)
+            );
           })
         );
+
+        if (transitionPulseRef.current > 0.02) {
+          transitionPulseRef.current *= 0.88;
+        } else if (transitionPulseRef.current !== 0) {
+          transitionPulseRef.current = 0;
+          transitionAnchorRef.current = null;
+        }
+
+        if (rhythmPulseRef.current > 0.02) {
+          rhythmPulseRef.current *= 0.84;
+        } else if (rhythmPulseRef.current !== 0) {
+          rhythmPulseRef.current = 0;
+        }
       }
       rafId = requestAnimationFrame(tick);
     };
@@ -337,15 +376,29 @@ export default function AnalysisPage({ params }: PageProps) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const stored = localStorage.getItem(ACTIVE_ANALYSIS_KEY);
-    if (!stored) return;
+    const activeList = readActiveAnalyses();
+    const matched = activeList.find((item) => item.sessionId === sessionId);
+    if (matched?.startedAt) {
+      startTimeRef.current = matched.startedAt;
+      return;
+    }
+    const legacyStored = localStorage.getItem(LEGACY_ACTIVE_ANALYSIS_KEY);
+    if (!legacyStored) return;
     try {
-      const parsed = JSON.parse(stored) as { sessionId?: string; startedAt?: number };
-      if (parsed?.sessionId === sessionId && parsed?.startedAt) {
-        startTimeRef.current = parsed.startedAt;
+      const parsed = JSON.parse(legacyStored) as { sessionId?: string; startedAt?: number };
+      if (parsed?.sessionId === sessionId) {
+        upsertActiveAnalysis({
+          sessionId: parsed.sessionId,
+          startedAt: parsed.startedAt,
+        });
+        if (parsed.startedAt) {
+          startTimeRef.current = parsed.startedAt;
+        }
       }
     } catch {
       // ignore parse errors
+    } finally {
+      localStorage.removeItem(LEGACY_ACTIVE_ANALYSIS_KEY);
     }
   }, [sessionId]);
 
@@ -353,27 +406,37 @@ export default function AnalysisPage({ params }: PageProps) {
     if (typeof window === "undefined") return;
     if (!sessionId) return;
     if (isSessionComplete || isCancelled || isLocallyStopped) {
-      localStorage.removeItem(ACTIVE_ANALYSIS_KEY);
+      removeActiveAnalysis(sessionId);
       return;
     }
 
-    const stored = localStorage.getItem(ACTIVE_ANALYSIS_KEY);
-    let startedAt = Date.now();
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as { startedAt?: number };
-        if (parsed?.startedAt) startedAt = parsed.startedAt;
-      } catch {
-        localStorage.removeItem(ACTIVE_ANALYSIS_KEY);
-      }
-    }
-
     const query = typeof result?.query === "string" ? result?.query : latestState?.query;
-    localStorage.setItem(
-      ACTIVE_ANALYSIS_KEY,
-      JSON.stringify({ sessionId, query: typeof query === "string" ? query : undefined, startedAt })
-    );
-  }, [sessionId, result?.query, latestState?.query, isSessionComplete, isCancelled, isLocallyStopped]);
+    const mutationContext =
+      ((result as PipelineState | null)?.mutation_context ??
+        (latestState as Partial<PipelineState> | null)?.mutation_context) ?? null;
+    const diseaseName =
+      typeof mutationContext?.disease_context === "string" &&
+      mutationContext.disease_context.trim() &&
+      mutationContext.disease_context !== "unknown"
+        ? mutationContext.disease_context.trim()
+        : undefined;
+
+    upsertActiveAnalysis({
+      sessionId,
+      query: typeof query === "string" ? query : undefined,
+      diseaseName,
+      startedAt: startTimeRef.current || Date.now(),
+    });
+  }, [
+    sessionId,
+    result?.query,
+    result?.mutation_context,
+    latestState?.query,
+    latestState?.mutation_context,
+    isSessionComplete,
+    isCancelled,
+    isLocallyStopped,
+  ]);
 
   const handleCancel = async () => {
     if (isCancelling || isSessionComplete || isCancelled) return;
@@ -384,7 +447,7 @@ export default function AnalysisPage({ params }: PageProps) {
       setIsLocallyStopped(true);
       markStoppedSession(sessionId);
       if (typeof window !== "undefined") {
-        localStorage.removeItem(ACTIVE_ANALYSIS_KEY);
+        removeActiveAnalysis(sessionId);
       }
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Cancel failed");
@@ -417,7 +480,13 @@ export default function AnalysisPage({ params }: PageProps) {
     { label: "ADMET", value: confidenceObject?.admet },
     { label: "Final", value: finalConfidence },
   ].filter((entry) => typeof entry.value === "number");
-  const selectivity = (result?.selectivity_results ?? []) as SelectivityResult[];
+  const rawSelectivity = Array.isArray(result?.selectivity_results)
+    ? (result.selectivity_results as SelectivityResult[])
+    : [];
+  const selectivity = rawSelectivity;
+  const selectivityNote =
+    (result as Record<string, unknown> | null)?.selectivity_note ??
+    (result as Record<string, unknown> | null)?.selectivity_method;
   const normalizePdbId = (value?: string | null) => {
     const trimmed = value?.trim().toUpperCase();
     return trimmed && /^[0-9A-Z]{4}$/.test(trimmed) ? trimmed : undefined;
@@ -491,7 +560,7 @@ export default function AnalysisPage({ params }: PageProps) {
       className="min-h-screen flex flex-col"
       style={{ background: "var(--background)", color: "var(--foreground)" }}
     >
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Top bar */}
         <div className="flex items-center justify-between mb-6">
           <button
@@ -532,9 +601,9 @@ export default function AnalysisPage({ params }: PageProps) {
         ) : null}
 
         {/* Main layout: sidebar + content */}
-        <div className="flex gap-6 items-start">
+        <div className="flex gap-6 xl:gap-8 items-start">
           {/* Left: pipeline status */}
-          <div className="hidden lg:block w-72 shrink-0 sticky top-20">
+          <div className="hidden lg:block w-72 xl:w-80 shrink-0 sticky top-20">
             {!isSessionComplete && (
               <div className="mb-3">
                 <div className="flex justify-between text-xs mb-1">
@@ -592,17 +661,17 @@ export default function AnalysisPage({ params }: PageProps) {
 
             {/* Loading skeletons */}
             {!isSessionComplete && (
-              <div className="flex justify-center items-center min-h-[60vh]">
-                <div className="w-full max-w-xl p-6">
-                  <div className="flex justify-center py-6">
+              <div className="flex justify-start items-center min-h-[60vh]">
+                <div className="w-full max-w-6xl px-2 lg:px-4 py-6">
+                  <div className="flex justify-start py-6">
                     <Matrix
                       rows={MATRIX_ROWS}
                       cols={MATRIX_COLS}
                       mode="vu"
                       levels={matrixLevels}
                       fps={14}
-                      size={13}
-                      gap={4}
+                      size={17}
+                      gap={5}
                       palette={{
                         on: "var(--primary)",
                         off: "var(--border)",
@@ -697,9 +766,18 @@ export default function AnalysisPage({ params }: PageProps) {
                   <TabsContent value="pocket">
                     <PocketGeometryAnalysis
                       volumeDelta={(result as any).pocket_delta?.volume_delta}
-                      hydrophobicityDelta={(result as any).pocket_delta?.hydrophobicity_score_delta}
-                      polarityDelta={(result as any).pocket_delta?.polarity_score_delta}
-                      chargeDelta={(result as any).pocket_delta?.charge_score_delta}
+                      hydrophobicityDelta={
+                        (result as any).pocket_delta?.hydrophobicity_delta ??
+                        (result as any).pocket_delta?.hydrophobicity_score_delta
+                      }
+                      polarityDelta={
+                        (result as any).pocket_delta?.polarity_delta ??
+                        (result as any).pocket_delta?.polarity_score_delta
+                      }
+                      chargeDelta={
+                        (result as any).pocket_delta?.charge_delta ??
+                        (result as any).pocket_delta?.charge_score_delta
+                      }
                       pocketReshaped={(result as any).pocket_delta?.pocket_reshaped}
                     />
                   </TabsContent>
@@ -710,10 +788,17 @@ export default function AnalysisPage({ params }: PageProps) {
                       <div className="p-4 bg-[var(--muted)] border-b border-[var(--border)]">
                         <h3 className="font-semibold text-sm">Selectivity Analysis</h3>
                         <p className="text-xs text-[var(--muted-foreground)] mt-1">
-                          Fold-selectivity compares target binding against the strongest off-target
-                          binder. Higher is generally safer; clinical suitability still needs
-                          wet-lab validation.
+                          Computed from real docking energies: ddG = G_off - G_target, ratio =
+                          exp(ddG / 0.593). Positive ddG indicates target preference.
                         </p>
+                        {typeof selectivityNote === "string" && selectivityNote.trim().length > 0 && (
+                          <p className="text-xs text-amber-300/90 mt-2">{selectivityNote}</p>
+                        )}
+                        {rawSelectivity.length === 0 && (
+                          <p className="text-xs text-[var(--destructive)] mt-2">
+                            Selectivity agent returned no usable values for this run.
+                          </p>
+                        )}
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
@@ -723,8 +808,8 @@ export default function AnalysisPage({ params }: PageProps) {
                                 "Molecule",
                                 "Target (kcal/mol)",
                                 "Off-Target (kcal/mol)",
+                                "ddG (kcal/mol)",
                                 "Ratio",
-                                "Label",
                               ].map((h) => (
                                 <th
                                   key={h}
@@ -737,13 +822,20 @@ export default function AnalysisPage({ params }: PageProps) {
                           </thead>
                           <tbody>
                             {selectivity.map((s) => {
-                              const {
-                                targetAffinity,
-                                offTargetAffinity,
-                                foldSelectivity,
-                                label,
-                                tone,
-                              } = deriveClinicalSelectivityRow(s);
+                              const targetAffinity =
+                                (s as any).target_affinity ?? (s as any).mutant_affinity ?? null;
+                              const offTargetAffinity =
+                                (s as any).off_target_affinity ??
+                                (s as any).wildtype_affinity ??
+                                (s as any).best_off_target_affinity ??
+                                null;
+                              const ddg =
+                                typeof targetAffinity === "number" &&
+                                typeof offTargetAffinity === "number"
+                                  ? offTargetAffinity - targetAffinity
+                                  : null;
+                              const ratio =
+                                typeof ddg === "number" ? Math.exp(ddg / 0.593) : null;
 
                               return (
                                 <tr
@@ -763,36 +855,15 @@ export default function AnalysisPage({ params }: PageProps) {
                                       ? offTargetAffinity.toFixed(2)
                                       : "N/A"}
                                   </td>
-                                  <td className="p-3 font-bold">
-                                    {typeof foldSelectivity === "number"
-                                      ? foldSelectivity.toFixed(2)
+                                  <td className="p-3 font-medium">
+                                    {typeof ddg === "number"
+                                      ? `${ddg > 0 ? "+" : ""}${ddg.toFixed(2)}`
                                       : "N/A"}
-                                    ×
                                   </td>
-                                  <td className="p-3">
-                                    <span
-                                      className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                                      style={{
-                                        color:
-                                          tone === "high"
-                                            ? "var(--selectivity-high)"
-                                            : tone === "moderate"
-                                              ? "var(--selectivity-moderate)"
-                                              : tone === "low"
-                                                ? "var(--selectivity-low)"
-                                                : "var(--selectivity-dangerous)",
-                                        background:
-                                          tone === "high"
-                                            ? "color-mix(in srgb, var(--selectivity-high) 10%, transparent)"
-                                            : tone === "moderate"
-                                              ? "color-mix(in srgb, var(--selectivity-moderate) 10%, transparent)"
-                                              : tone === "low"
-                                                ? "color-mix(in srgb, var(--selectivity-low) 10%, transparent)"
-                                                : "color-mix(in srgb, var(--selectivity-dangerous) 10%, transparent)",
-                                      }}
-                                    >
-                                      {label}
-                                    </span>
+                                  <td className="p-3 font-bold">
+                                    {typeof ratio === "number"
+                                      ? `${ratio.toFixed(2)}x`
+                                      : "N/A"}
                                   </td>
                                 </tr>
                               );
@@ -984,6 +1055,11 @@ export default function AnalysisPage({ params }: PageProps) {
                     <div className="rounded-xl border border-[var(--border)] p-4">
                       <h3 className="font-semibold text-sm mb-3">Knowledge Graph</h3>
                       <KnowledgeGraph graph={result.knowledge_graph} />
+                      {!result.knowledge_graph && (
+                        <p className="mt-3 text-xs text-[var(--destructive)]">
+                          Knowledge graph unavailable. Backend did not return `knowledge_graph`.
+                        </p>
+                      )}
                     </div>
                   </TabsContent>
 
@@ -1102,4 +1178,3 @@ export default function AnalysisPage({ params }: PageProps) {
     </div>
   );
 }
->>>>>>> Stashed changes

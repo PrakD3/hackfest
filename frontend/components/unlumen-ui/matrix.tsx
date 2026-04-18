@@ -290,8 +290,7 @@ export const pulse: Frame[] = (() => {
   return frames;
 })();
 
-export function vu(columns: number, levels: number[]): Frame {
-  const rows = 7;
+export function vu(columns: number, levels: number[], rows = 7): Frame {
   const frame = emptyFrame(rows, columns);
 
   for (let col = 0; col < Math.min(columns, levels.length); col++) {
@@ -451,7 +450,7 @@ export const Matrix = React.forwardRef<HTMLDivElement, MatrixProps>(
 
     const currentFrame = useMemo(() => {
       if (mode === "vu" && levels && levels.length > 0) {
-        return ensureFrameSize(vu(cols, levels), rows, cols);
+        return ensureFrameSize(vu(cols, levels, rows), rows, cols);
       }
 
       if (pattern) {

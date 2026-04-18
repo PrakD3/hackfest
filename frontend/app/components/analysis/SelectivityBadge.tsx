@@ -23,7 +23,6 @@ export function SelectivityBadge({ ratio, label, offTargetName }: Props) {
         style={{ color, borderColor: color, background: `${color}15` }}
       >
         <span className="text-base font-bold">{ratio.toFixed(1)}×</span>
-        {label}
       </span>
     </Tooltip>
   );
