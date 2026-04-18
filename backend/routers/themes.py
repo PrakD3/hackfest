@@ -2,9 +2,8 @@
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import text
 
-from utils.db import get_engine, list_themes, save_theme
+from utils.db import _build_dsn, _get_conn, list_themes, save_theme
 
 router = APIRouter()
 
@@ -27,22 +26,30 @@ async def create_theme(req: ThemeRequest):
 
 @router.put("/themes/{theme_id}/activate")
 async def activate_theme(theme_id: str):
-    engine = get_engine()
-    if not engine:
+    if not _build_dsn():
         raise HTTPException(status_code=503, detail="DB not configured")
-    async with engine.begin() as conn:
-        await conn.execute(text("UPDATE user_themes SET is_active = FALSE"))
+    conn = await _get_conn()
+    if not conn:
+        raise HTTPException(status_code=503, detail="DB connection failed")
+    try:
+        await conn.execute("UPDATE user_themes SET is_active = FALSE")
         await conn.execute(
-            text("UPDATE user_themes SET is_active = TRUE WHERE id = :id"), {"id": theme_id}
+            "UPDATE user_themes SET is_active = TRUE WHERE id = $1", theme_id
         )
+    finally:
+        await conn.close()
     return {"activated": theme_id}
 
 
 @router.delete("/themes/{theme_id}")
 async def delete_theme(theme_id: str):
-    engine = get_engine()
-    if not engine:
+    if not _build_dsn():
         raise HTTPException(status_code=503, detail="DB not configured")
-    async with engine.begin() as conn:
-        await conn.execute(text("DELETE FROM user_themes WHERE id = :id"), {"id": theme_id})
+    conn = await _get_conn()
+    if not conn:
+        raise HTTPException(status_code=503, detail="DB connection failed")
+    try:
+        await conn.execute("DELETE FROM user_themes WHERE id = $1", theme_id)
+    finally:
+        await conn.close()
     return {"deleted": theme_id}

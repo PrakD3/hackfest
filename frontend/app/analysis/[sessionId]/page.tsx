@@ -55,6 +55,8 @@ export default function AnalysisPage({ params }: PageProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
+  // True while fetching a saved result from Neon (no live pipeline)
+  const [isRecovering, setIsRecovering] = useState(false);
   const startTimeRef = useRef(Date.now());
   const MATRIX_COLS = 52;
   const MATRIX_ROWS = 10;
@@ -164,7 +166,7 @@ export default function AnalysisPage({ params }: PageProps) {
         merged[key] = value;
       }
     }
-    return merged as PipelineState;
+    return merged as unknown as PipelineState;
   };
 
   const currentAgentFromEvents = [...events].reverse().find((e) => e.event === "agent_start")?.agent;
@@ -331,7 +333,7 @@ export default function AnalysisPage({ params }: PageProps) {
 
     const applySnapshot = (data: Record<string, unknown>) => {
       if (!isMounted) return;
-      setResult((prev) => mergeNonNull(prev, data as PipelineState));
+      setResult((prev) => mergeNonNull(prev, data as unknown as Partial<PipelineState>));
       const status = (data as { status?: string }).status;
       const cancelled = Boolean((data as { cancelled?: boolean }).cancelled);
       const hasFinalReport = Boolean((data as { final_report?: unknown }).final_report);
@@ -340,6 +342,10 @@ export default function AnalysisPage({ params }: PageProps) {
         setIsLocallyStopped(true);
         markStoppedSession(sessionId);
       } else if (hasFinalReport) {
+        // Recovered from Neon (no live SSE events) — show recovery UI.
+        if (events.length === 0) {
+          setIsRecovering(true);
+        }
         unmarkStoppedSession(sessionId);
       }
     };
@@ -370,7 +376,7 @@ export default function AnalysisPage({ params }: PageProps) {
     if (!isSessionComplete) return;
     if (latestState?.final_report || result?.final_report) return;
     getSessionResult(sessionId)
-      .then((data) => setResult((prev) => mergeNonNull(prev, data as PipelineState)))
+      .then((data) => setResult((prev) => mergeNonNull(prev, data as unknown as Partial<PipelineState>)))
       .catch((e) => setLoadError(e.message));
   }, [isSessionComplete, latestState, sessionId, result?.final_report]);
 
@@ -581,8 +587,8 @@ export default function AnalysisPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Error state */}
-        {((streamError && !isLocallyStopped && !isCancelled) || loadError) && (
+        {/* Error state — suppressed while recovering a saved result from DB */}
+        {((!isRecovering && streamError && !isLocallyStopped && !isCancelled) || loadError) && (
           <div className="mb-6 p-4 rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/10 flex items-center gap-3">
             <AlertCircle size={16} className="text-[var(--destructive)] shrink-0" />
             <span className="text-sm">{loadError || streamError}</span>
@@ -602,64 +608,68 @@ export default function AnalysisPage({ params }: PageProps) {
 
         {/* Main layout: sidebar + content */}
         <div className="flex gap-6 xl:gap-8 items-start">
-          {/* Left: pipeline status */}
-          <div className="hidden lg:block w-72 xl:w-80 shrink-0 sticky top-20">
-            {!isSessionComplete && (
-              <div className="mb-3">
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-[var(--muted-foreground)]">
-                    {currentAgent || "Starting…"}
-                  </span>
-                  <span className="text-[var(--primary)] font-medium">{Math.round(progress)}%</span>
-                </div>
-                <Progress value={progress} />
-              </div>
-            )}
-            <PipelineStatus
-              events={events}
-              isComplete={isSessionComplete}
-              isCancelled={isCancelled}
-              agentStatuses={result?.agent_statuses}
-              startTime={startTimeRef.current}
-            />
-            {!isSessionComplete && !isCancelled && (
-              <Button
-                type="button"
-                variant="outline"
-                className="mt-3 w-full gap-2"
-                onClick={handleCancel}
-                disabled={isCancelling}
-              >
-                {isCancelling ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Square className="h-4 w-4" />
-                )}
-                Stop analysis
-              </Button>
-            )}
-          </div>
-
-          {/* Right: results */}
-          <div className="flex-1 min-w-0">
-            {/* Mobile progress */}
-            <div className="lg:hidden mb-4">
+          {/* Left: pipeline status — hidden when recovering a saved result */}
+          {!isRecovering && (
+            <div className="hidden lg:block w-72 xl:w-80 shrink-0 sticky top-20">
               {!isSessionComplete && (
-                <>
+                <div className="mb-3">
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-[var(--muted-foreground)]">
                       {currentAgent || "Starting…"}
                     </span>
-                    <span className="text-[var(--primary)] font-medium">
-                      {Math.round(progress)}%
-                    </span>
+                    <span className="text-[var(--primary)] font-medium">{Math.round(progress)}%</span>
                   </div>
                   <Progress value={progress} />
-                </>
+                </div>
+              )}
+              <PipelineStatus
+                events={events}
+                isComplete={isSessionComplete}
+                isCancelled={isCancelled}
+                agentStatuses={result?.agent_statuses}
+                startTime={startTimeRef.current}
+              />
+              {!isSessionComplete && !isCancelled && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-3 w-full gap-2"
+                  onClick={handleCancel}
+                  disabled={isCancelling}
+                >
+                  {isCancelling ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Square className="h-4 w-4" />
+                  )}
+                  Stop analysis
+                </Button>
               )}
             </div>
+          )}
 
-            {/* Loading skeletons */}
+          {/* Right: results */}
+          <div className="flex-1 min-w-0">
+            {/* Mobile progress — hidden when recovering */}
+            {!isRecovering && (
+              <div className="lg:hidden mb-4">
+                {!isSessionComplete && (
+                  <>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-[var(--muted-foreground)]">
+                        {currentAgent || "Starting…"}
+                      </span>
+                      <span className="text-[var(--primary)] font-medium">
+                        {Math.round(progress)}%
+                      </span>
+                    </div>
+                    <Progress value={progress} />
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Loading / recovering */}
             {!isSessionComplete && (
               <div className="flex justify-start items-center min-h-[60vh]">
                 <div className="w-full max-w-6xl px-2 lg:px-4 py-6">
@@ -680,9 +690,8 @@ export default function AnalysisPage({ params }: PageProps) {
                       className="text-[var(--primary)]"
                     />
                   </div>
-
                   <div className="text-sm text-[var(--muted-foreground)] text-center">
-                    {statusMessage}
+                    {isRecovering ? "Loading saved result…" : statusMessage}
                   </div>
                 </div>
               </div>

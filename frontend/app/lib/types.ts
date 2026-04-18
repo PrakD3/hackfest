@@ -276,14 +276,17 @@ export interface PipelineState {
   literature: LiteratureItem[];
   proteins: ProteinItem[];
   structures: StructureItem[];
+  pdb_content?: string | null;
   binding_pocket?: BindingPocket | null;
   pocket_detection_method?: string | null;
   pocket_delta?: PocketDelta | null;
   known_compounds: KnownCompound[];
+  generated_molecules?: unknown[];
   docking_results: DockingResult[];
   selectivity_results: SelectivityResult[];
   admet_profiles: ADMETProfile[];
   toxicophore_highlights: ToxicophoreHighlight[];
+  optimized_leads?: unknown[];
   evolution_tree: EvolutionTree | null;
   md_results?: MDResult[];
   clinical_trials: ClinicalTrial[];
@@ -313,6 +316,7 @@ export interface AgentEvent {
     | "pipeline_start"
     | "pipeline_cancelled"
     | "pipeline_complete"
+    | "not_found"
     | "heartbeat";
   agent?: string;
   progress?: number;

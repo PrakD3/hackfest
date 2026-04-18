@@ -29,10 +29,17 @@ export function useSSEStream(sessionId: string | null, enabled = true) {
       try {
         const data: AgentEvent = JSON.parse(e.data);
         setEvents((prev) => [...prev, data]);
+
         if (data.data && typeof data.data === "object") {
           setLatestState((prev) => ({ ...(prev ?? {}), ...data.data }));
         }
-        if (data.event === "pipeline_complete" || data.event === "pipeline_cancelled") {
+
+        if (
+          data.event === "pipeline_complete" ||
+          data.event === "pipeline_cancelled" ||
+          // Session was recovered from DB — treat as already complete
+          data.event === "not_found"
+        ) {
           setIsComplete(true);
           es.close();
         }
@@ -42,8 +49,20 @@ export function useSSEStream(sessionId: string | null, enabled = true) {
     };
 
     es.onerror = () => {
+      // Only surface an error if the connection dropped mid-stream
+      // (i.e., we had real events before the failure). A cold connect
+      // failure on a recovered/non-existent session is handled by the
+      // not_found event above, so we don't show a banner for it.
       if (enabled) {
-        setError("Stream connection error");
+        setEvents((prev) => {
+          const hasRealEvents = prev.some(
+            (ev) => ev.event !== "heartbeat" && ev.event !== "not_found"
+          );
+          if (hasRealEvents) {
+            setError("Stream connection error");
+          }
+          return prev;
+        });
       }
       es.close();
     };
