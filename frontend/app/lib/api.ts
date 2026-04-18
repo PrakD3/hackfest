@@ -84,9 +84,14 @@ export async function listThemes(): Promise<Record<string, unknown>[]> {
   }
 }
 
-export async function searchMutations(query: string): Promise<string[]> {
+export async function searchMutations(
+  query: string,
+  source: "all" | "local" | "online" = "all"
+): Promise<string[]> {
   try {
-    const res = await fetch(`${API_URL}/api/search?query=${encodeURIComponent(query)}`);
+    const res = await fetch(
+      `${API_URL}/api/search?query=${encodeURIComponent(query)}&source=${source}`
+    );
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data?.suggestions) ? data.suggestions : [];

@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAnalysis } from "@/app/hooks/useAnalysis";
 import { searchMutations } from "@/app/lib/api";
 
@@ -74,9 +74,12 @@ export default function ResearchPage() {
   const router = useRouter();
   const { launch, isLoading } = useAnalysis();
   const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [localSuggestions, setLocalSuggestions] = useState<string[]>([]);
+  const [onlineSuggestions, setOnlineSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [isLocalSuggesting, setIsLocalSuggesting] = useState(false);
+  const [isOnlineSuggesting, setIsOnlineSuggesting] = useState(false);
+  const searchRequestId = useRef(0);
 
   const handleLaunch = async () => {
     if (!query.trim()) return;
@@ -98,10 +101,39 @@ export default function ResearchPage() {
     if (!showSuggestions) return;
 
     const handle = window.setTimeout(async () => {
-      setIsSuggesting(true);
-      const next = await searchMutations(query.trim());
-      setSuggestions(next);
-      setIsSuggesting(false);
+      const trimmed = query.trim();
+      const requestId = ++searchRequestId.current;
+
+      setIsLocalSuggesting(true);
+      setIsOnlineSuggesting(Boolean(trimmed));
+      setLocalSuggestions([]);
+      setOnlineSuggestions([]);
+
+      void searchMutations(trimmed, "local")
+        .then((nextLocal) => {
+          if (requestId !== searchRequestId.current) return;
+          setLocalSuggestions(nextLocal);
+        })
+        .finally(() => {
+          if (requestId !== searchRequestId.current) return;
+          setIsLocalSuggesting(false);
+        });
+
+      if (!trimmed) {
+        setOnlineSuggestions([]);
+        setIsOnlineSuggesting(false);
+        return;
+      }
+
+      void searchMutations(trimmed, "online")
+        .then((nextOnline) => {
+          if (requestId !== searchRequestId.current) return;
+          setOnlineSuggestions(nextOnline);
+        })
+        .finally(() => {
+          if (requestId !== searchRequestId.current) return;
+          setIsOnlineSuggesting(false);
+        });
     }, 200);
 
     return () => window.clearTimeout(handle);
@@ -146,30 +178,80 @@ export default function ResearchPage() {
                       color: "var(--foreground)",
                     }}
                   />
-                  {showSuggestions && (isSuggesting || suggestions.length > 0) && (
+                  {showSuggestions &&
+                    (isLocalSuggesting ||
+                      isOnlineSuggesting ||
+                      localSuggestions.length > 0 ||
+                      onlineSuggestions.length > 0) && (
                     <div
                       className="absolute z-20 mt-2 w-full rounded-xl border shadow-lg overflow-hidden"
                       style={{ borderColor: "var(--border)", background: "var(--card)" }}
                       role="listbox"
                     >
-                      {isSuggesting && (
-                        <div className="px-4 py-3 text-xs text-muted-foreground">Searching…</div>
-                      )}
-                      {suggestions.map((item, index) => (
-                        <button
-                          key={`${item}-${index}`}
-                          type="button"
-                          className="w-full text-left px-4 py-3 text-sm hover:bg-muted transition-colors"
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => {
-                            setQuery(item);
-                            setShowSuggestions(false);
-                          }}
-                        >
-                          <span className="font-mono text-xs text-muted-foreground mr-2">Match</span>
-                          {item}
-                        </button>
-                      ))}
+                      <div className="grid md:grid-cols-2">
+                        <div className="border-r" style={{ borderColor: "var(--border)" }}>
+                          <div className="px-4 py-2 text-[11px] font-semibold tracking-wide uppercase text-muted-foreground">
+                            Local Search
+                          </div>
+                          {isLocalSuggesting && (
+                            <div className="px-4 py-2 text-xs text-muted-foreground">
+                              Searching local file...
+                            </div>
+                          )}
+                          {!isLocalSuggesting && localSuggestions.length === 0 && query.trim() && (
+                            <div className="px-4 py-2 text-xs text-muted-foreground">
+                              No local matches
+                            </div>
+                          )}
+                          {localSuggestions.map((item, index) => (
+                            <button
+                              key={`local-${item}-${index}`}
+                              type="button"
+                              className="w-full text-left px-4 py-3 text-sm hover:bg-muted transition-colors"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => {
+                                setQuery(item);
+                                setShowSuggestions(false);
+                              }}
+                            >
+                              <span className="font-mono text-xs text-muted-foreground mr-2">
+                                Local
+                              </span>
+                              {item}
+                            </button>
+                          ))}
+                        </div>
+                        <div>
+                          <div className="px-4 py-2 text-[11px] font-semibold tracking-wide uppercase text-muted-foreground">
+                            Online Search
+                          </div>
+                          {isOnlineSuggesting && (
+                            <div className="px-4 py-2 text-xs text-muted-foreground">Searching...</div>
+                          )}
+                          {!isOnlineSuggesting && onlineSuggestions.length === 0 && query.trim() && (
+                            <div className="px-4 py-2 text-xs text-muted-foreground">
+                              No online matches
+                            </div>
+                          )}
+                          {onlineSuggestions.map((item, index) => (
+                            <button
+                              key={`online-${item}-${index}`}
+                              type="button"
+                              className="w-full text-left px-4 py-3 text-sm hover:bg-muted transition-colors"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => {
+                                setQuery(item);
+                                setShowSuggestions(false);
+                              }}
+                            >
+                              <span className="font-mono text-xs text-muted-foreground mr-2">
+                                Online
+                              </span>
+                              {item}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

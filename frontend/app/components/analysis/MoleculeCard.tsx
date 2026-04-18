@@ -1,8 +1,15 @@
 "use client";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, ShieldCheck, ShieldX, Zap } from "lucide-react";
-import { useState } from "react";
+import { AlertTriangle, RotateCcw, Search, ShieldCheck, ShieldX, Zap } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/app/components/ui/badge";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/app/components/ui/dialog";
 import { Switch } from "@/app/components/ui/switch";
 import type { RankedLead } from "@/app/lib/types";
 import { MoleculeViewer2D } from "./MoleculeViewer2D";
@@ -39,6 +46,12 @@ export function MoleculeCard({
   showProtein = false,
 }: Props) {
   const [show3D, setShow3D] = useState(false);
+  const [isViewerModalOpen, setIsViewerModalOpen] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [rotationDeg, setRotationDeg] = useState(0);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging2D, setIsDragging2D] = useState(false);
+  const [dragOrigin, setDragOrigin] = useState({ x: 0, y: 0 });
 
   const gnnScore = lead.gnn_dg ?? lead.docking_score;
   const scoreColor =
@@ -54,6 +67,40 @@ export function MoleculeCard({
     return "var(--stability-unstable)";
   };
 
+  const modal2DTransform = useMemo(
+    () => `translate(${pan.x}px, ${pan.y}px) scale(${zoom}) rotate(${rotationDeg}deg)`,
+    [pan.x, pan.y, zoom, rotationDeg]
+  );
+
+  const reset2DView = () => {
+    setZoom(1);
+    setRotationDeg(0);
+    setPan({ x: 0, y: 0 });
+    setIsDragging2D(false);
+  };
+
+  const handle2DWheel: React.WheelEventHandler<HTMLDivElement> = (event) => {
+    event.preventDefault();
+    setZoom((prev) => {
+      const next = prev + (event.deltaY < 0 ? 0.1 : -0.1);
+      return Math.max(0.5, Math.min(4, next));
+    });
+  };
+
+  const handle2DMouseDown: React.MouseEventHandler<HTMLDivElement> = (event) => {
+    setIsDragging2D(true);
+    setDragOrigin({ x: event.clientX - pan.x, y: event.clientY - pan.y });
+  };
+
+  const handle2DMouseMove: React.MouseEventHandler<HTMLDivElement> = (event) => {
+    if (!isDragging2D) return;
+    setPan({ x: event.clientX - dragOrigin.x, y: event.clientY - dragOrigin.y });
+  };
+
+  const stopDragging2D = () => {
+    setIsDragging2D(false);
+  };
+
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 space-y-4">
       {/* Header */}
@@ -67,27 +114,6 @@ export function MoleculeCard({
         </Badge>
       </div>
 
-      {/* Binding Affinity Scores */}
-      <div className="space-y-2 p-3 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
-        {lead.gnn_dg !== undefined && (
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-[var(--muted-foreground)]">GNN ΔG</span>
-            <span className="font-mono font-bold" style={{ color: scoreColor }}>
-              {lead.gnn_dg.toFixed(1)}{" "}
-              {lead.gnn_uncertainty ? `± ${lead.gnn_uncertainty.toFixed(1)}` : ""} kcal/mol
-            </span>
-          </div>
-        )}
-        {lead.mmgbsa_dg !== undefined && (
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-[var(--muted-foreground)]">MM-GBSA ΔG</span>
-            <span className="font-mono font-bold text-blue-600">
-              {lead.mmgbsa_dg.toFixed(1)} ± 0.5 kcal/mol
-            </span>
-          </div>
-        )}
-      </div>
-
       {/* 2D/3D Viewer */}
       <AnimatePresence mode="wait">
         {!show3D ? (
@@ -96,12 +122,24 @@ export function MoleculeCard({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            className="relative group"
           >
-            <MoleculeViewer2D
-              molImageB64={lead.mol_image_b64}
-              smiles={lead.smiles}
-              className="h-32 rounded-lg"
-            />
+            <button
+              type="button"
+              onClick={() => setIsViewerModalOpen(true)}
+              className="w-full text-left cursor-zoom-in"
+              title="Open interactive molecule viewer"
+            >
+              <MoleculeViewer2D
+                molImageB64={lead.mol_image_b64}
+                smiles={lead.smiles}
+                className="h-32 rounded-lg"
+              />
+              <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium bg-black/65 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                <Search size={12} />
+                Expand
+              </span>
+            </button>
           </motion.div>
         ) : (
           <motion.div
@@ -109,14 +147,26 @@ export function MoleculeCard({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            className="relative group"
           >
-            <MoleculeViewer3D
-              pdbId={showProtein ? pdbId : undefined}
-              proteinUrl={showProtein ? proteinUrl : undefined}
-              ligandPoseUrl={ligandPoseUrl}
-              ligandPoseFormat={ligandPoseFormat}
-              className="h-32 rounded-lg"
-            />
+            <button
+              type="button"
+              onClick={() => setIsViewerModalOpen(true)}
+              className="w-full text-left cursor-zoom-in"
+              title="Open interactive molecule viewer"
+            >
+              <MoleculeViewer3D
+                pdbId={showProtein ? pdbId : undefined}
+                proteinUrl={showProtein ? proteinUrl : undefined}
+                ligandPoseUrl={ligandPoseUrl}
+                ligandPoseFormat={ligandPoseFormat}
+                className="h-32 rounded-lg"
+              />
+              <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium bg-black/65 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                <Search size={12} />
+                Expand
+              </span>
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -148,6 +198,96 @@ export function MoleculeCard({
               : "Docked ligand pose unavailable."}
         </p>
       )}
+
+      <Dialog
+        open={isViewerModalOpen}
+        onOpenChange={(open) => {
+          setIsViewerModalOpen(open);
+          if (!open) reset2DView();
+        }}
+      >
+        <DialogContent className="w-[95vw] max-w-6xl max-h-[92vh] p-5">
+          <DialogClose onClose={() => setIsViewerModalOpen(false)} />
+          <DialogHeader className="mb-3">
+            <DialogTitle>
+              {lead.compound_name} · {show3D ? "3D Viewer" : "2D Viewer"}
+            </DialogTitle>
+            <p className="text-xs text-[var(--muted-foreground)]">
+              {show3D
+                ? "Mouse controls: drag to rotate, right-drag to pan, and scroll to zoom."
+                : "Drag to pan, scroll to zoom, and use rotate controls for orientation."}
+            </p>
+          </DialogHeader>
+
+          {!show3D ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded border border-[var(--border)] text-xs hover:bg-[var(--muted)]"
+                  onClick={() => setRotationDeg((prev) => prev - 15)}
+                >
+                  Rotate -15°
+                </button>
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded border border-[var(--border)] text-xs hover:bg-[var(--muted)]"
+                  onClick={() => setRotationDeg((prev) => prev + 15)}
+                >
+                  Rotate +15°
+                </button>
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded border border-[var(--border)] text-xs hover:bg-[var(--muted)] inline-flex items-center gap-1"
+                  onClick={reset2DView}
+                >
+                  <RotateCcw size={12} />
+                  Reset
+                </button>
+              </div>
+
+              <div
+                className="h-[68vh] rounded-xl border border-[var(--border)] bg-[var(--muted)]/20 overflow-hidden relative"
+                onWheel={handle2DWheel}
+                onMouseDown={handle2DMouseDown}
+                onMouseMove={handle2DMouseMove}
+                onMouseUp={stopDragging2D}
+                onMouseLeave={stopDragging2D}
+              >
+                {lead.mol_image_b64 ? (
+                  <img
+                    src={`data:image/png;base64,${lead.mol_image_b64}`}
+                    alt={lead.smiles}
+                    draggable={false}
+                    className="absolute left-1/2 top-1/2 max-w-none select-none"
+                    style={{
+                      transform: modal2DTransform,
+                      transformOrigin: "center center",
+                      width: "70%",
+                      translate: "-50% -50%",
+                      cursor: isDragging2D ? "grabbing" : "grab",
+                    }}
+                  />
+                ) : (
+                  <div className="absolute inset-0 grid place-items-center p-6">
+                    <p className="text-xs font-mono text-[var(--muted-foreground)] break-all text-center">
+                      {lead.smiles}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <MoleculeViewer3D
+              pdbId={showProtein ? pdbId : undefined}
+              proteinUrl={showProtein ? proteinUrl : undefined}
+              ligandPoseUrl={ligandPoseUrl}
+              ligandPoseFormat={ligandPoseFormat}
+              className="h-[72vh] rounded-xl"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Stability & Properties */}
       <div className="space-y-2">
@@ -227,3 +367,4 @@ export function MoleculeCard({
     </div>
   );
 }
+>>>>>>> Stashed changes

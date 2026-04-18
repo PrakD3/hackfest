@@ -43,6 +43,83 @@ interface PageProps {
   params: Promise<{ sessionId: string }>;
 }
 
+type SelectivityTone = "high" | "moderate" | "low" | "danger";
+
+const CLINICAL_SELECTIVITY_THRESHOLDS = {
+  high: 10,
+  moderate: 3.2,
+  low: 1.5,
+} as const;
+
+function deriveClinicalSelectivityRow(entry: SelectivityResult): {
+  targetAffinity: number | null;
+  offTargetAffinity: number | null;
+  foldSelectivity: number | null;
+  label: string;
+  tone: SelectivityTone;
+} {
+  const data = entry as Record<string, unknown>;
+  const targetAffinity = [data.target_affinity, data.mutant_affinity].find(
+    (value): value is number => typeof value === "number"
+  ) ?? null;
+  const offTargetAffinity = [
+    data.off_target_affinity,
+    data.wildtype_affinity,
+    data.best_off_target_affinity,
+  ].find((value): value is number => typeof value === "number") ?? null;
+
+  let foldSelectivity: number | null = null;
+  if (typeof data.fold_selectivity === "number") {
+    foldSelectivity = data.fold_selectivity;
+  } else if (
+    typeof targetAffinity === "number" &&
+    typeof offTargetAffinity === "number" &&
+    offTargetAffinity !== 0
+  ) {
+    foldSelectivity = Math.abs(targetAffinity) / Math.abs(offTargetAffinity);
+  } else if (typeof data.selectivity_ratio === "number") {
+    foldSelectivity = data.selectivity_ratio;
+  }
+
+  if (typeof foldSelectivity === "number" && Number.isFinite(foldSelectivity)) {
+    if (foldSelectivity >= CLINICAL_SELECTIVITY_THRESHOLDS.high) {
+      return {
+        targetAffinity,
+        offTargetAffinity,
+        foldSelectivity,
+        label: "High selectivity",
+        tone: "high",
+      };
+    }
+    if (foldSelectivity >= CLINICAL_SELECTIVITY_THRESHOLDS.moderate) {
+      return {
+        targetAffinity,
+        offTargetAffinity,
+        foldSelectivity,
+        label: "Moderate selectivity",
+        tone: "moderate",
+      };
+    }
+    if (foldSelectivity >= CLINICAL_SELECTIVITY_THRESHOLDS.low) {
+      return {
+        targetAffinity,
+        offTargetAffinity,
+        foldSelectivity,
+        label: "Low selectivity",
+        tone: "low",
+      };
+    }
+  }
+
+  return {
+    targetAffinity,
+    offTargetAffinity,
+    foldSelectivity,
+    label: "Non-selective",
+    tone: "danger",
+  };
+}
+
 export default function AnalysisPage({ params }: PageProps) {
   const { sessionId } = use(params);
   const router = useRouter();
@@ -620,9 +697,9 @@ export default function AnalysisPage({ params }: PageProps) {
                   <TabsContent value="pocket">
                     <PocketGeometryAnalysis
                       volumeDelta={(result as any).pocket_delta?.volume_delta}
-                      hydrophobicityDelta={(result as any).pocket_delta?.hydrophobicity_delta}
-                      polarityDelta={(result as any).pocket_delta?.polarity_delta}
-                      chargeDelta={(result as any).pocket_delta?.charga}
+                      hydrophobicityDelta={(result as any).pocket_delta?.hydrophobicity_score_delta}
+                      polarityDelta={(result as any).pocket_delta?.polarity_score_delta}
+                      chargeDelta={(result as any).pocket_delta?.charge_score_delta}
                       pocketReshaped={(result as any).pocket_delta?.pocket_reshaped}
                     />
                   </TabsContent>
@@ -633,7 +710,9 @@ export default function AnalysisPage({ params }: PageProps) {
                       <div className="p-4 bg-[var(--muted)] border-b border-[var(--border)]">
                         <h3 className="font-semibold text-sm">Selectivity Analysis</h3>
                         <p className="text-xs text-[var(--muted-foreground)] mt-1">
-                          Ratio = target affinity / off-target affinity. Higher is safer.
+                          Fold-selectivity compares target binding against the strongest off-target
+                          binder. Higher is generally safer; clinical suitability still needs
+                          wet-lab validation.
                         </p>
                       </div>
                       <div className="overflow-x-auto">
@@ -658,31 +737,13 @@ export default function AnalysisPage({ params }: PageProps) {
                           </thead>
                           <tbody>
                             {selectivity.map((s) => {
-                              const targetAffinity =
-                                (s as any).target_affinity ?? (s as any).mutant_affinity ?? null;
-                              const offTargetAffinity =
-                                (s as any).off_target_affinity ??
-                                (s as any).wildtype_affinity ??
-                                (s as any).best_off_target_affinity ??
-                                null;
-                              const ratio =
-                                (s as any).selectivity_ratio ??
-                                (s as any).fold_selectivity ??
-                                (s as any).selectivity_score ??
-                                null;
-                              const rawLabel =
-                                (s as any).selectivity_label ?? (s as any).selectivity_assessment;
-                              const label = typeof rawLabel === "string" ? rawLabel : "N/A";
-                              const normalized = label.toLowerCase();
-                              const tone = normalized.includes("high")
-                                ? "high"
-                                : normalized.includes("moderate") || normalized.includes("selective")
-                                  ? "moderate"
-                                  : normalized.includes("low") || normalized.includes("non")
-                                    ? "low"
-                                    : normalized.includes("danger")
-                                      ? "danger"
-                                      : "low";
+                              const {
+                                targetAffinity,
+                                offTargetAffinity,
+                                foldSelectivity,
+                                label,
+                                tone,
+                              } = deriveClinicalSelectivityRow(s);
 
                               return (
                                 <tr
@@ -703,7 +764,9 @@ export default function AnalysisPage({ params }: PageProps) {
                                       : "N/A"}
                                   </td>
                                   <td className="p-3 font-bold">
-                                    {typeof ratio === "number" ? ratio.toFixed(2) : "N/A"}
+                                    {typeof foldSelectivity === "number"
+                                      ? foldSelectivity.toFixed(2)
+                                      : "N/A"}
                                     ×
                                   </td>
                                   <td className="p-3">
@@ -737,17 +800,9 @@ export default function AnalysisPage({ params }: PageProps) {
                           </tbody>
                         </table>
                         {!selectivity.length && (
-                          <div className="p-4">
-                            {(result as any)?.selectivity_note ? (
-                              <p className="text-sm text-amber-600 font-medium">
-                                {(result as any).selectivity_note}
-                              </p>
-                            ) : (
-                              <p className="text-sm text-[var(--muted-foreground)]">
-                                No selectivity data. Off-target assessment requires AutoDock Vina + OpenBabel.
-                              </p>
-                            )}
-                          </div>
+                          <p className="p-4 text-sm text-[var(--muted-foreground)]">
+                            No selectivity data.
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1047,3 +1102,4 @@ export default function AnalysisPage({ params }: PageProps) {
     </div>
   );
 }
+>>>>>>> Stashed changes

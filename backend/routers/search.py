@@ -5,7 +5,7 @@ import csv
 import json
 import os
 import re
-from typing import Iterable
+from typing import Iterable, Literal
 from pathlib import Path
 from fastapi import APIRouter, Query
 import httpx
@@ -50,7 +50,6 @@ def _build_suggestions() -> list[str]:
 
 
 _SUGGESTIONS = _build_suggestions()
-
 _COSMIC_INDEX: dict[str, tuple[str, ...]] | None = None
 _COSMIC_GENES: tuple[str, ...] = ()
 _COSMIC_LOCK = asyncio.Lock()
@@ -116,44 +115,6 @@ def _cosmic_path() -> Path:
     if env_path:
         return Path(env_path)
     return _DEFAULT_COSMIC_PATH
-
-
-def _build_cosmic_index(path: Path) -> tuple[dict[str, tuple[str, ...]], tuple[str, ...]]:
-    if not path.exists():
-        raise FileNotFoundError(f"COSMIC dataset not found at {path}")
-
-    index: dict[str, set[str]] = {}
-    with path.open("r", encoding="utf-8", errors="replace") as handle:
-        reader = csv.DictReader(handle, delimiter="\t")
-        for row in reader:
-            if not isinstance(row, dict):
-                continue
-            gene = (row.get("GENE_NAME") or "").strip()
-            mutation = (row.get("Mutation AA") or "").strip()
-            if not gene or not mutation:
-                continue
-            normalized = _normalize_mutation_aa(mutation)
-            if not normalized:
-                continue
-            gene_key = gene.upper()
-            index.setdefault(gene_key, set()).add(normalized)
-
-    finalized = {gene: tuple(sorted(muts)) for gene, muts in index.items()}
-    return finalized, tuple(sorted(finalized.keys()))
-
-
-async def _get_cosmic_index() -> tuple[dict[str, tuple[str, ...]], tuple[str, ...]]:
-    global _COSMIC_INDEX
-    global _COSMIC_GENES
-    if _COSMIC_INDEX is not None:
-        return _COSMIC_INDEX, _COSMIC_GENES
-    async with _COSMIC_LOCK:
-        if _COSMIC_INDEX is None:
-            path = _cosmic_path()
-            index, genes = await asyncio.to_thread(_build_cosmic_index, path)
-            _COSMIC_INDEX = index
-            _COSMIC_GENES = genes
-    return _COSMIC_INDEX or {}, _COSMIC_GENES
 
 
 def _dedupe(labels: Iterable[str]) -> list[str]:
@@ -345,6 +306,46 @@ def _split_query(query: str) -> tuple[str | None, str | None]:
     return tokens[0], None
 
 
+def _build_cosmic_index(path: Path) -> tuple[dict[str, tuple[str, ...]], tuple[str, ...]]:
+    if not path.exists():
+        raise FileNotFoundError(f"COSMIC dataset not found at {path}")
+
+    index: dict[str, set[str]] = {}
+    with path.open("r", encoding="utf-8", errors="replace") as handle:
+        reader = csv.DictReader(handle, delimiter="\t")
+        for row in reader:
+            if not isinstance(row, dict):
+                continue
+            gene = (row.get("GENE_NAME") or "").strip()
+            mutation = (row.get("Mutation AA") or "").strip()
+            if not gene or not mutation:
+                continue
+            normalized = _normalize_mutation_aa(mutation)
+            if not normalized:
+                continue
+            gene_key = gene.upper()
+            index.setdefault(gene_key, set()).add(normalized)
+
+    finalized = {gene: tuple(sorted(muts)) for gene, muts in index.items()}
+    return finalized, tuple(sorted(finalized.keys()))
+
+
+async def _get_cosmic_index() -> tuple[dict[str, tuple[str, ...]], tuple[str, ...]]:
+    global _COSMIC_INDEX
+    global _COSMIC_GENES
+
+    if _COSMIC_INDEX is not None:
+        return _COSMIC_INDEX, _COSMIC_GENES
+
+    async with _COSMIC_LOCK:
+        if _COSMIC_INDEX is None:
+            index, genes = await asyncio.to_thread(_build_cosmic_index, _cosmic_path())
+            _COSMIC_INDEX = index
+            _COSMIC_GENES = genes
+
+    return _COSMIC_INDEX or {}, _COSMIC_GENES
+
+
 async def _search_cosmic(query: str, limit: int) -> list[str]:
     if not query:
         return []
@@ -382,28 +383,49 @@ async def _search_cosmic(query: str, limit: int) -> list[str]:
 
     return suggestions
 
+async def _search_online(query: str, limit: int) -> list[str]:
+    if not query:
+        return []
+    providers = [
+        _search_clinvar(query, limit),
+        _search_civic(query, limit),
+        _search_mygene(query, limit),
+        _search_cbioportal_genes(query, limit),
+        _search_ncbi_gene(query, limit),
+    ]
+    results = await asyncio.gather(*providers, return_exceptions=True)
+    external: list[str] = []
+    for item in results:
+        if isinstance(item, list):
+            external.extend(item)
+    ranked = _dedupe(external)
+    ranked.sort(key=lambda s: _rank(s, query), reverse=True)
+    return ranked[:limit]
+
+
+async def _search_local(query: str, limit: int) -> list[str]:
+    local_seed = _SUGGESTIONS if not query else [s for s in _SUGGESTIONS if query.lower() in s.lower()]
+    cosmic = await _search_cosmic(query, limit) if query else []
+    merged = _dedupe([*cosmic, *local_seed])
+    merged.sort(key=lambda s: _rank(s, query), reverse=True)
+    return merged[:limit]
+
 
 @router.get("/search")
-async def search(query: str = Query("", max_length=200), limit: int = Query(8, ge=1, le=20)):
+async def search(
+    query: str = Query("", max_length=200),
+    limit: int = Query(8, ge=1, le=20),
+    source: Literal["all", "local", "online"] = Query("all"),
+):
     q = query.strip()
-    local = _SUGGESTIONS if not q else [s for s in _SUGGESTIONS if q.lower() in s.lower()]
+    local = await _search_local(q, limit)
+    online = await _search_online(q, limit) if q else []
 
-    external: list[str] = []
-    if q and len(local) < limit:
-        cosmic = await _search_cosmic(q, limit)
-        providers = [
-            _search_clinvar(q, limit),
-            _search_civic(q, limit),
-            _search_mygene(q, limit),
-            _search_cbioportal_genes(q, limit),
-            _search_ncbi_gene(q, limit),
-        ]
-        results = await asyncio.gather(*providers, return_exceptions=True)
-        for item in results:
-            if isinstance(item, list):
-                external.extend(item)
-        external = [*cosmic, *external]
+    if source == "local":
+        return {"source": "local", "suggestions": local}
+    if source == "online":
+        return {"source": "online", "suggestions": online}
 
-    merged = _dedupe([*local, *external])
+    merged = _dedupe([*local, *online])
     merged.sort(key=lambda s: _rank(s, q), reverse=True)
-    return {"suggestions": merged[:limit]}
+    return {"source": "all", "local_suggestions": local, "online_suggestions": online, "suggestions": merged[:limit]}
