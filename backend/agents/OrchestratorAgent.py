@@ -54,7 +54,8 @@ AGENT_ORDER = [
     ("ClinicalTrialAgent", 97),
     
     # Stage 10: Output
-    ("SynthesisAgent", 99),
+    ("SynthesisAgent", 98),
+    ("ExplainabilityAgent", 99),
     ("ReportAgent", 100),
 ]
 

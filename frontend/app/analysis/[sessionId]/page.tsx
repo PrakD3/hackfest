@@ -31,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/ta
 import { useSSEStream } from "@/app/hooks/useSSEStream";
 import { cancelAnalysis, getDockedPoseUrl, getSessionResult, getStructureUrl } from "@/app/lib/api";
 import { Matrix } from "@/components/unlumen-ui/matrix";
+import Counter from "@/components/Counter";
 import type {
   FinalReport,
   PipelineState,
@@ -316,6 +317,29 @@ export default function AnalysisPage({ params }: PageProps) {
   };
 
   const report = result?.final_report as FinalReport | null;
+  const confidenceObject =
+    (report as any)?.confidence_object ||
+    (result as any)?.confidence ||
+    (result as any)?.confidence_scores ||
+    {};
+  const finalConfidence =
+    typeof confidenceObject?.final === "number"
+      ? confidenceObject.final
+      : Math.min(
+          ...[
+            confidenceObject?.structure,
+            confidenceObject?.docking,
+            confidenceObject?.selectivity,
+            confidenceObject?.admet,
+          ].filter((v) => typeof v === "number")
+        );
+  const confidenceEntries = [
+    { label: "Structure", value: confidenceObject?.structure },
+    { label: "Docking", value: confidenceObject?.docking },
+    { label: "Selectivity", value: confidenceObject?.selectivity },
+    { label: "ADMET", value: confidenceObject?.admet },
+    { label: "Final", value: finalConfidence },
+  ].filter((entry) => typeof entry.value === "number");
   const selectivity = (result?.selectivity_results ?? []) as SelectivityResult[];
   const normalizePdbId = (value?: string | null) => {
     const trimmed = value?.trim().toUpperCase();
@@ -342,6 +366,33 @@ export default function AnalysisPage({ params }: PageProps) {
         .filter(Boolean)
     : [];
   const synthesisScores = (result?.sa_scores ?? []) as SynthesisScore[];
+  const reasoningTrace = result?.reasoning_trace
+    ? result.reasoning_trace
+    : {
+        "pipeline_overview": `Pipeline run for ${result?.query || "the requested target"}. ` +
+          `Structures: ${result?.structures?.length ?? 0}. ` +
+          `Molecules generated: ${result?.generated_molecules?.length ?? 0}. ` +
+          `Docked: ${dockingResults.length}.`,
+        "structure_evidence": `Structure method: ${result?.pocket_detection_method || "unknown"}. ` +
+          `Binding pocket center: ` +
+          `(${result?.binding_pocket?.center_x ?? 0}, ` +
+          `${result?.binding_pocket?.center_y ?? 0}, ` +
+          `${result?.binding_pocket?.center_z ?? 0}).`,
+        "docking_summary": `Top docking score: ` +
+          `${topDock?.binding_energy ?? "N/A"} kcal/mol ` +
+          `(${topDock?.method ?? "unknown"}).`,
+        "selectivity_summary": selectivity.length
+          ? `Selective leads: ${selectivity.filter((s) => s.selective).length} / ${selectivity.length}.`
+          : "Selectivity analysis not available.",
+        "admet_summary": `ADMET passing: ${result?.admet_profiles?.filter((p) => p.lipinski_pass).length ?? 0} ` +
+          `of ${result?.admet_profiles?.length ?? 0}.`,
+        "optimization_steps": `Optimized leads: ${result?.optimized_leads?.length ?? 0}. ` +
+          `Evolution nodes: ${report?.evolution_tree?.nodes?.length ?? 0}.`,
+        "resistance_notes": resistanceFlags.length
+          ? `Resistance flags: ${resistanceFlags.slice(0, 3).join("; ")}.`
+          : "No resistance flags reported.",
+        "trial_context": `Clinical trial entries: ${report?.clinical_trials?.length ?? 0}.`,
+      };
   const synthesisItems = report
     ? report.ranked_leads
         .slice(0, 3)
@@ -709,7 +760,7 @@ export default function AnalysisPage({ params }: PageProps) {
 
                   {/* ADMET */}
                   <TabsContent value="admet">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       <div className="rounded-xl border border-[var(--border)] p-4">
                         <h3 className="font-semibold text-sm mb-3">ADMET Profiles</h3>
                         <ADMETPanel profiles={result.admet_profiles ?? []} />
@@ -878,15 +929,46 @@ export default function AnalysisPage({ params }: PageProps) {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       <div className="rounded-xl border border-[var(--border)] p-4">
                         <h3 className="font-semibold text-sm mb-3">Agent Reasoning</h3>
-                        <ReasoningTrace trace={result.reasoning_trace} />
+                        <ReasoningTrace trace={reasoningTrace} />
+                      </div>
+                      <div className="rounded-xl border border-[var(--border)] p-4">
+                        <h3 className="font-semibold text-sm mb-3">Resistance Analysis</h3>
+                        <ResistanceProfile
+                          forecast={report.resistance_forecast}
+                          resistanceFlags={resistanceFlags}
+                        />
                       </div>
                       <div className="space-y-4">
                         <div className="rounded-xl border border-[var(--border)] p-4">
-                          <h3 className="font-semibold text-sm mb-3">Resistance Analysis</h3>
-                          <ResistanceProfile
-                            forecast={report.resistance_forecast}
-                            resistanceFlags={resistanceFlags}
-                          />
+                          <h3 className="font-semibold text-sm mb-3">Model Confidence</h3>
+                          {confidenceEntries.length > 0 ? (
+                            <div className="space-y-3">
+                              {confidenceEntries.map((entry) => (
+                                <div key={entry.label} className="flex items-center justify-between">
+                                  <span className="text-xs text-[var(--muted-foreground)]">
+                                    {entry.label}
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <Counter
+                                      value={Math.round(((entry.value as number) || 0) * 100)}
+                                      fontSize={20}
+                                      padding={2}
+                                      gap={2}
+                                      textColor="var(--foreground)"
+                                      fontWeight={600}
+                                      gradientFrom="transparent"
+                                      gradientTo="transparent"
+                                    />
+                                    <span className="text-xs text-[var(--muted-foreground)]">%</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-[var(--muted-foreground)]">
+                              Confidence data not available.
+                            </div>
+                          )}
                         </div>
                         <LangSmithTrace
                           runId={result.langsmith_run_id}

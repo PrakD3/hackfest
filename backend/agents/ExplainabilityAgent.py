@@ -41,27 +41,25 @@ class ExplainabilityAgent:
 
         trace = {
             "mutation_effect": (
-                f"{gene} {mutation} alters the kinase domain structure, reducing drug binding affinity "
-                f"and activating downstream proliferation pathways. This mutation confers resistance to "
-                f"first-generation inhibitors."
+                f"{gene} {mutation} is the input mutation. The pipeline treats this as the primary "
+                f"context for structure prep, docking, and downstream ranking."
             ),
             "target_evidence": (
-                f"Primary target identified via UniProt ({len(state.get('proteins', []))} proteins found) "
-                f"and RCSB PDB ({len(state.get('structures', []))} structures). "
-                f"Literature support from {len(state.get('literature', []))} PubMed papers."
+                f"Targets pulled from UniProt ({len(state.get('proteins', []))} proteins) and "
+                f"structures from RCSB PDB ({len(state.get('structures', []))} structures). "
+                f"Literature count: {len(state.get('literature', []))} PubMed records."
             ),
             "pocket_evidence": (
-                f"Binding pocket detected via {state.get('pocket_detection_method', 'unknown')} method "
-                f"at coordinates ({pocket.get('center_x', 0):.1f}, {pocket.get('center_y', 0):.1f}, "
-                f"{pocket.get('center_z', 0):.1f}). "
-                f"Grid size: {pocket.get('size_x', 20)}x{pocket.get('size_y', 20)}x"
+                f"Binding pocket detected via {state.get('pocket_detection_method', 'unknown')} at "
+                f"({pocket.get('center_x', 0):.1f}, {pocket.get('center_y', 0):.1f}, "
+                f"{pocket.get('center_z', 0):.1f}) with size "
+                f"{pocket.get('size_x', 20)}x{pocket.get('size_y', 20)}x"
                 f"{pocket.get('size_z', 20)} Å."
             ),
             "docking_support": (
                 f"Top docking score: {top_lead.get('binding_energy', 'N/A')} kcal/mol "
-                f"({top_lead.get('confidence', 'N/A')} confidence). "
-                f"Mode: {state.get('docking_mode', 'unknown')}. "
-                f"{len(docking)} molecules successfully docked."
+                f"(method: {state.get('docking_mode', 'unknown')}). "
+                f"Docked molecules: {len(docking)}."
             ),
             "selectivity_analysis": (
                 (
@@ -69,58 +67,55 @@ class ExplainabilityAgent:
                     f"({top_sel.get('selectivity_label', 'N/A')}). "
                     f"Off-target: {top_sel.get('off_target_name', 'N/A')} "
                     f"({top_sel.get('off_target_pdb', 'N/A')}). "
-                    f"{sum(1 for s in selectivity if s.get('selective'))} of "
-                    f"{len(selectivity)} leads are selective."
+                    f"Selective leads: {sum(1 for s in selectivity if s.get('selective'))} / "
+                    f"{len(selectivity)}."
                 )
                 if selectivity
-                else "Selectivity analysis not performed."
+                else "Selectivity analysis not available."
             ),
             "admet_summary": (
-                f"{admet_passing} of {len(admet)} molecules pass Lipinski RO5. "
-                f"{pains_flagged} PAINS flags detected. "
-                f"Average bioavailability: {avg_bioavail:.2f}"
+                f"Lipinski pass: {admet_passing} / {len(admet)}. "
+                f"PAINS flagged: {pains_flagged}. "
+                f"Average bioavailability: {avg_bioavail:.2f}."
                 if admet
-                else "ADMET screening not performed."
+                else "ADMET screening not available."
             ),
             "optimization_steps": (
-                f"Evolution tree: {len(tree.get('nodes', []))} nodes, "
+                f"Evolution tree: {len(tree.get('nodes', []))} nodes and "
                 f"{len(tree.get('edges', []))} transformations. "
-                f"{len(optimized)} leads optimized from {len(admet)} ADMET-passing candidates. "
-                f"Operations: scaffold hopping, bioisostere replacement, fragment growing."
+                f"Optimized leads: {len(optimized)} from {len(admet)} ADMET-passing candidates."
             ),
             "resistance_forecast": (
                 resistance or f"No resistance forecast available for {gene} {mutation}."
             ),
             "clinical_context": (
-                f"{len(trials)} active clinical trials found targeting {gene} {mutation}. "
+                f"Clinical trial entries: {len(trials)}."
                 + (
-                    f"Nearest: {trials[0].get('title', 'N/A')[:60]} "
+                    f" Example: {trials[0].get('title', 'N/A')[:60]} "
                     f"({trials[0].get('phase', 'N/A')})"
                     if trials
                     else ""
                 )
             ),
             "final_logic": (
-                f"1. Parsed mutation {gene} {mutation} → cancer driver.\n"
-                f"2. Fetched {len(state.get('literature', []))} papers, "
+                f"1. Parsed mutation {gene} {mutation}.\n"
+                f"2. Retrieved {len(state.get('literature', []))} papers, "
                 f"{len(state.get('proteins', []))} proteins, "
                 f"{len(state.get('structures', []))} structures.\n"
                 f"3. Detected binding pocket at "
                 f"({pocket.get('center_x', 0):.0f}, "
                 f"{pocket.get('center_y', 0):.0f}, "
                 f"{pocket.get('center_z', 0):.0f}).\n"
-                f"4. Generated {len(state.get('generated_molecules', []))} molecules "
-                f"→ docked {len(docking)} successfully.\n"
-                f"5. Selectivity analysis: top lead ratio = "
-                f"{top_sel.get('selectivity_ratio', 'N/A')}x.\n"
-                f"6. ADMET screening: {admet_passing} leads pass drug-likeness.\n"
-                f"7. Optimization yielded {len(optimized)} improved leads via evolution tree.\n"
-                f"8. Resistance profile: resistant to {state.get('resistant_drugs', [])}, "
-                f"recommended: {state.get('recommended_drugs', [])}.\n"
-                f"9. Clinical context: {len(trials)} active trials.\n"
-                f"10. Final recommendation: top lead with selectivity "
-                f"{top_sel.get('selectivity_ratio', 'N/A')}x and docking score "
-                f"{top_lead.get('binding_energy', 'N/A')} kcal/mol."
+                f"4. Generated {len(state.get('generated_molecules', []))} molecules and docked "
+                f"{len(docking)} successfully.\n"
+                f"5. Selectivity: top ratio = {top_sel.get('selectivity_ratio', 'N/A')}x.\n"
+                f"6. ADMET pass count: {admet_passing}.\n"
+                f"7. Optimization produced {len(optimized)} candidates from evolution steps.\n"
+                f"8. Resistance flags: {state.get('resistant_drugs', [])}.\n"
+                f"9. Clinical trials count: {len(trials)}.\n"
+                f"10. Final ranking highlights the top candidate by docking score "
+                f"{top_lead.get('binding_energy', 'N/A')} kcal/mol and selectivity "
+                f"{top_sel.get('selectivity_ratio', 'N/A')}x."
             ),
         }
 
@@ -144,12 +139,15 @@ class ExplainabilityAgent:
             from utils.llm_router import LLMRouter
 
             prompt = (
-                f"Summarize this drug discovery result in 2 clear paragraphs for a scientific audience. "
+                "Write 2 short paragraphs that explain how the pipeline reached the final ranking. "
+                "Use only the provided data. Avoid clinical claims and avoid these words: "
+                "drug, treatment, cure, effective, recommended. "
+                "Use the term 'candidate compound' and say results are computational predictions. "
                 f"Gene: {gene}, Mutation: {mutation}. "
-                f"Top lead docking score: {top_lead.get('binding_energy', 'N/A')} kcal/mol. "
-                f"Selectivity: {top_sel.get('selectivity_ratio', 'N/A')}x vs "
+                f"Top docking score: {top_lead.get('binding_energy', 'N/A')} kcal/mol. "
+                f"Selectivity ratio: {top_sel.get('selectivity_ratio', 'N/A')}x vs "
                 f"{top_sel.get('off_target_name', 'unknown')}. "
-                f"Clinical trials found: {len(trials)}."
+                f"Clinical trial entries: {len(trials)}."
             )
             result, provider = await LLMRouter(
                 "You are a drug discovery scientist writing a clear summary."
@@ -157,8 +155,9 @@ class ExplainabilityAgent:
             return result, provider
         except Exception:
             return (
-                f"Drug discovery pipeline completed for {gene} {mutation}. "
-                f"Top lead achieves {top_lead.get('binding_energy', 'N/A')} kcal/mol binding affinity "
+                f"Pipeline completed for {gene} {mutation}. "
+                f"Top candidate docking score: {top_lead.get('binding_energy', 'N/A')} kcal/mol, "
                 f"with {top_sel.get('selectivity_ratio', 'N/A')}x selectivity over off-target proteins. "
-                f"{len(trials)} active clinical trials provide real-world context for this target."
+                f"Clinical trial entries: {len(trials)}. "
+                "All outputs are computational predictions and require experimental validation."
             ), None
