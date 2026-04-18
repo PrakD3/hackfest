@@ -32,6 +32,9 @@ backend/*.egg-info/
 backend/venv/
 backend/.venv/
 backend/data/docked_poses/
+backend/search/CancerMutationCensus_AllData_Tsv_v103_GRCh37/
+backend/search/CancerMutationCensus_AllData_Tsv_v103_GRCh37.tar
+backend/search/CancerMutationCensus_AllData_Tsv_v103_GRCh37.tar:Zone.Identifier
 
 # ─── Root legacy Next.js (before restructure) ───────────────────────────────
 /node_modules/
