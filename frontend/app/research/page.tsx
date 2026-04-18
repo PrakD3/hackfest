@@ -12,8 +12,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAnalysis } from "@/app/hooks/useAnalysis";
+import { searchMutations } from "@/app/lib/api";
 
 const DEMO_CHIPS = ["EGFR T790M", "HIV K103N", "BRCA1 5382insC", "TP53 R248W"];
 
@@ -72,6 +73,9 @@ export default function ResearchPage() {
   const router = useRouter();
   const { launch, isLoading } = useAnalysis();
   const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
 
   const handleLaunch = async () => {
     if (!query.trim()) return;
@@ -88,6 +92,19 @@ export default function ResearchPage() {
       router.push(`/analysis/${sessionId}`);
     }
   };
+
+  useEffect(() => {
+    if (!showSuggestions) return;
+
+    const handle = window.setTimeout(async () => {
+      setIsSuggesting(true);
+      const next = await searchMutations(query.trim());
+      setSuggestions(next);
+      setIsSuggesting(false);
+    }, 200);
+
+    return () => window.clearTimeout(handle);
+  }, [query, showSuggestions]);
 
   return (
     <div
@@ -120,12 +137,40 @@ export default function ResearchPage() {
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleLaunch()}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
                     className="w-full pl-10 pr-4 py-3 rounded-xl border text-sm outline-none transition-colors bg-input"
                     style={{
                       borderColor: "var(--border)",
                       color: "var(--foreground)",
                     }}
                   />
+                  {showSuggestions && (isSuggesting || suggestions.length > 0) && (
+                    <div
+                      className="absolute z-20 mt-2 w-full rounded-xl border shadow-lg overflow-hidden"
+                      style={{ borderColor: "var(--border)", background: "var(--card)" }}
+                      role="listbox"
+                    >
+                      {isSuggesting && (
+                        <div className="px-4 py-3 text-xs text-muted-foreground">Searching…</div>
+                      )}
+                      {suggestions.map((item, index) => (
+                        <button
+                          key={`${item}-${index}`}
+                          type="button"
+                          className="w-full text-left px-4 py-3 text-sm hover:bg-muted transition-colors"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => {
+                            setQuery(item);
+                            setShowSuggestions(false);
+                          }}
+                        >
+                          <span className="font-mono text-xs text-muted-foreground mr-2">Match</span>
+                          {item}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <button
                   type="button"

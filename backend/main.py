@@ -38,6 +38,7 @@ from routers import (
     stream,
     status,
     molecules,
+    search,
     export,
     benchmark,
     discoveries,
@@ -49,6 +50,7 @@ app.include_router(analysis.router,    prefix="/api")
 app.include_router(stream.router,      prefix="/api")
 app.include_router(status.router,      prefix="/api")
 app.include_router(molecules.router,   prefix="/api")
+app.include_router(search.router,      prefix="/api")
 app.include_router(export.router,      prefix="/api")
 app.include_router(benchmark.router,   prefix="/api")
 app.include_router(discoveries.router, prefix="/api")

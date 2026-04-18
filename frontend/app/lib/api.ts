@@ -83,6 +83,17 @@ export async function listThemes(): Promise<Record<string, unknown>[]> {
   }
 }
 
+export async function searchMutations(query: string): Promise<string[]> {
+  try {
+    const res = await fetch(`${API_URL}/api/search?query=${encodeURIComponent(query)}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data?.suggestions) ? data.suggestions : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function saveTheme(
   name: string,
   theme_json: Record<string, unknown>
