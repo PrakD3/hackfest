@@ -12,6 +12,8 @@ frontend/.yarn/*
 frontend/coverage/
 frontend/next-env.d.ts
 frontend/*.tsbuildinfo
+# Test UI (temporary, excluded from commits)
+frontend/test-ui.html
 
 # ─── Backend ────────────────────────────────────────────────────────────────
 backend/.env
