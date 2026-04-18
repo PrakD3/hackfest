@@ -121,7 +121,6 @@ class StructurePrepAgent:
             state.setdefault("warnings", []).append(
                 f"Structure fallback: using wildtype PDB {wt_pdb_id} (mutant structure unavailable)."
             )
-
         # If we don't have WT yet and have mutant sequence, fold WT version
         if not wt_pdb_content and pdb_content:
             proteins = state.get("proteins", [])

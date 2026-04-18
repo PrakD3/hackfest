@@ -418,7 +418,6 @@ def _sanitize_pose_pdb(pdb_path: Path) -> None:
     except Exception:
         pass
 
-
 def _prepare_receptor(pdb_content: str, log) -> str:
     """Convert PDB text to a Vina-compatible receptor PDBQT file.
 
