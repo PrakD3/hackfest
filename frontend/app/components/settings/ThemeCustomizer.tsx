@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { saveTheme } from "@/app/lib/api";
-import { AMBER_MINIMAL, applyTheme, exportTheme, importThemeFromJSON } from "@/app/lib/theme";
+import { AMBER_MINIMAL, applyTheme, exportTheme, getSavedTheme, importThemeFromJSON } from "@/app/lib/theme";
 import type { ThemeTokens } from "@/app/lib/types";
 
 const CSS_VARS = [
@@ -48,10 +48,8 @@ export function ThemeCustomizer() {
   const [jsonInput, setJsonInput] = useState("");
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("dda-theme");
-      if (saved) setTheme(JSON.parse(saved));
-    } catch {}
+    const saved = getSavedTheme();
+    if (saved) setTheme(saved);
   }, []);
 
   const updateColor = (key: string, val: string) => {

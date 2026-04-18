@@ -3,6 +3,20 @@ export interface ThemeTokens {
   colors: Record<string, string>;
 }
 
+const REQUIRED_THEME_KEYS = [
+  "background",
+  "foreground",
+  "border",
+  "card",
+  "card-foreground",
+  "muted",
+  "muted-foreground",
+  "primary",
+  "primary-foreground",
+  "secondary",
+  "secondary-foreground",
+] as const;
+
 export const AMBER_MINIMAL: ThemeTokens = {
   name: "amber minimal theme",
   colors: {
@@ -64,8 +78,33 @@ export const AMBER_MINIMAL: ThemeTokens = {
   },
 };
 
+function isThemeTokens(value: unknown): value is ThemeTokens {
+  if (!value || typeof value !== "object") return false;
+  const maybe = value as ThemeTokens;
+  return typeof maybe.name === "string" && !!maybe.colors && typeof maybe.colors === "object";
+}
+
+function normalizeTheme(tokens: ThemeTokens): ThemeTokens {
+  return {
+    name: tokens.name || AMBER_MINIMAL.name,
+    colors: {
+      ...AMBER_MINIMAL.colors,
+      ...tokens.colors,
+    },
+  };
+}
+
+function isValidTheme(tokens: ThemeTokens): boolean {
+  return REQUIRED_THEME_KEYS.every((key) => {
+    const value = tokens.colors[key];
+    return typeof value === "string" && value.trim().length > 0;
+  });
+}
+
 export function applyTheme(tokens: ThemeTokens): void {
   const root = document.documentElement;
+
+  const normalized = normalizeTheme(tokens);
 
   const aliases: Record<string, string> = {
     "ring-3": "ring",
@@ -80,14 +119,14 @@ export function applyTheme(tokens: ThemeTokens): void {
     "header-ring": "header-ring",
   };
 
-  for (const [key, value] of Object.entries(tokens.colors)) {
+  for (const [key, value] of Object.entries(normalized.colors)) {
     root.style.setProperty(`--${key}`, value);
     const alias = aliases[key];
     if (alias) {
       root.style.setProperty(`--${alias}`, value);
     }
   }
-  localStorage.setItem("dda-theme", JSON.stringify(tokens));
+  localStorage.setItem("dda-theme", JSON.stringify(normalized));
 }
 
 export function exportTheme(tokens: ThemeTokens): void {
@@ -105,7 +144,7 @@ export function exportTheme(tokens: ThemeTokens): void {
 export function importThemeFromJSON(json: string): ThemeTokens | null {
   try {
     const p = JSON.parse(json);
-    return p?.colors ? { name: p.name ?? "Custom", colors: p.colors } : null;
+    return p?.colors ? normalizeTheme({ name: p.name ?? "Custom", colors: p.colors }) : null;
   } catch {
     return null;
   }
@@ -116,8 +155,19 @@ export function getSavedTheme(): ThemeTokens | null {
   const raw = localStorage.getItem("dda-theme");
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as ThemeTokens;
+    const parsed = JSON.parse(raw);
+    if (!isThemeTokens(parsed)) {
+      localStorage.removeItem("dda-theme");
+      return null;
+    }
+    const normalized = normalizeTheme(parsed);
+    if (!isValidTheme(normalized)) {
+      localStorage.removeItem("dda-theme");
+      return null;
+    }
+    return normalized;
   } catch {
+    localStorage.removeItem("dda-theme");
     return null;
   }
 }
