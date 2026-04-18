@@ -620,9 +620,9 @@ export default function AnalysisPage({ params }: PageProps) {
                   <TabsContent value="pocket">
                     <PocketGeometryAnalysis
                       volumeDelta={(result as any).pocket_delta?.volume_delta}
-                      hydrophobicityDelta={(result as any).pocket_delta?.hydrophobicity_score_delta}
-                      polarityDelta={(result as any).pocket_delta?.polarity_score_delta}
-                      chargeDelta={(result as any).pocket_delta?.charge_score_delta}
+                      hydrophobicityDelta={(result as any).pocket_delta?.hydrophobicity_delta}
+                      polarityDelta={(result as any).pocket_delta?.polarity_delta}
+                      chargeDelta={(result as any).pocket_delta?.charga}
                       pocketReshaped={(result as any).pocket_delta?.pocket_reshaped}
                     />
                   </TabsContent>
@@ -737,9 +737,17 @@ export default function AnalysisPage({ params }: PageProps) {
                           </tbody>
                         </table>
                         {!selectivity.length && (
-                          <p className="p-4 text-sm text-[var(--muted-foreground)]">
-                            No selectivity data.
-                          </p>
+                          <div className="p-4">
+                            {(result as any)?.selectivity_note ? (
+                              <p className="text-sm text-amber-600 font-medium">
+                                {(result as any).selectivity_note}
+                              </p>
+                            ) : (
+                              <p className="text-sm text-[var(--muted-foreground)]">
+                                No selectivity data. Off-target assessment requires AutoDock Vina + OpenBabel.
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
