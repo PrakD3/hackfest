@@ -9,6 +9,8 @@ import {
   YAxis,
 } from "recharts";
 import { Badge } from "@/app/components/ui/badge";
+import { useModeStore } from "@/components/ModeToggle";
+import { simplifyTerm, simplifyText } from "@/app/lib/easy-mode";
 
 interface MDValidationProps {
   rmsdStable?: boolean;
@@ -25,6 +27,7 @@ export function MDValidation({
   mmgbsaDg,
   rmsdTrajectory,
 }: MDValidationProps) {
+  const { isEasyMode } = useModeStore();
   const getStabilityColor = (
     label?: string
   ): "success" | "warning" | "destructive" | "secondary" => {
@@ -44,7 +47,7 @@ export function MDValidation({
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold">Molecular Dynamics Validation</h3>
+        <h3 className="font-semibold">{simplifyTerm("Molecular Dynamics Validation", isEasyMode)}</h3>
         {stabilityLabel && (
           <Badge variant={getStabilityColor(stabilityLabel)}>{stabilityLabel}</Badge>
         )}
@@ -54,7 +57,7 @@ export function MDValidation({
         {rmsdMean !== undefined && (
           <div className="p-4 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
             <div className="text-xs text-[var(--muted-foreground)] mb-2">
-              Mean RMSD (last 10 ns)
+              {simplifyTerm("Mean RMSD", isEasyMode)}
             </div>
             <div className="text-2xl font-bold">{rmsdMean.toFixed(2)} Å</div>
             <div className="text-xs text-[var(--muted-foreground)] mt-2">
@@ -69,7 +72,7 @@ export function MDValidation({
 
         {mmgbsaDg !== undefined && (
           <div className="p-4 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
-            <div className="text-xs text-[var(--muted-foreground)] mb-2">MM-GBSA ΔG</div>
+            <div className="text-xs text-[var(--muted-foreground)] mb-2">{simplifyTerm("MM-GBSA ΔG", isEasyMode)}</div>
             <div className="text-2xl font-bold">{mmgbsaDg.toFixed(1)} kcal/mol</div>
             <div className="text-xs text-[var(--muted-foreground)] mt-2">
               ±0.5 kcal/mol (MM-GBSA)
@@ -80,7 +83,7 @@ export function MDValidation({
 
       {rmsdData.length > 0 && (
         <div className="space-y-2">
-          <div className="text-sm font-medium">RMSD Trajectory (50 ns)</div>
+          <div className="text-sm font-medium">{simplifyTerm("RMSD Trajectory", isEasyMode)}</div>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={rmsdData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -91,7 +94,7 @@ export function MDValidation({
               />
               <YAxis
                 tick={{ fontSize: 12 }}
-                label={{ value: "RMSD (Å)", angle: -90, position: "insideLeft" }}
+                label={{ value: simplifyTerm("RMSD", isEasyMode), angle: -90, position: "insideLeft" }}
               />
               <Tooltip
                 contentStyle={{
@@ -115,8 +118,7 @@ export function MDValidation({
 
       <div className="rounded-lg bg-blue-500/10 border border-blue-500/30 p-3">
         <p className="text-xs text-blue-700 dark:text-blue-400">
-          💡 50 ns molecular dynamics simulation validating the docking prediction. RMSD measures
-          ligand displacement from initial pose. Flat trajectory indicates stable binding.
+          {simplifyText("💡 50 ns molecular dynamics simulation validating the docking prediction. RMSD measures ligand displacement from initial pose. Flat trajectory indicates stable binding.", isEasyMode)}
         </p>
       </div>
     </div>

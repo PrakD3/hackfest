@@ -1,6 +1,7 @@
-"use client";
 import { AlertCircle, TrendingUp } from "lucide-react";
 import { Badge } from "@/app/components/ui/badge";
+import { useModeStore } from "@/components/ModeToggle";
+import { simplifyTerm } from "@/app/lib/easy-mode";
 
 interface PocketGeometryProps {
   volumeDelta?: number;
@@ -17,6 +18,7 @@ export function PocketGeometryAnalysis({
   chargeDelta,
   pocketReshaped,
 }: PocketGeometryProps) {
+  const { isEasyMode } = useModeStore();
   const getVolumeTrend = (delta?: number) => {
     if (delta === undefined) return null;
     if (delta > 50) return { label: "Expanded", color: "text-blue-500" };
@@ -35,10 +37,10 @@ export function PocketGeometryAnalysis({
     }
 
     if (hydrophobicityDelta && hydrophobicityDelta < -0.2) {
-      implications.push("✓ More polar groups (NH, OH) will engage with newly hydrophilic pocket");
+      implications.push(isEasyMode ? "✓ Better for water-attracting groups" : "✓ More polar groups (NH, OH) will engage with newly hydrophilic pocket");
     }
     if (hydrophobicityDelta && hydrophobicityDelta > 0.2) {
-      implications.push("✓ More lipophilic substituents (CF3, phenyl) will fill hydrophobic regions");
+      implications.push(isEasyMode ? "✓ Better for oily/greasy groups" : "✓ More lipophilic substituents (CF3, phenyl) will fill hydrophobic regions");
     }
 
     if (polarityDelta && polarityDelta > 0.1) {
@@ -58,7 +60,7 @@ export function PocketGeometryAnalysis({
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold">Pocket Geometry Analysis</h3>
+        <h3 className="font-semibold">{simplifyTerm("Pocket Geometry Analysis", isEasyMode)}</h3>
         {pocketReshaped && (
           <Badge variant="destructive" className="gap-1">
             <AlertCircle size={12} />
@@ -70,7 +72,7 @@ export function PocketGeometryAnalysis({
       <div className="grid grid-cols-2 gap-4">
         {volumeDelta !== undefined && (
           <div className="p-3 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
-            <div className="text-xs text-[var(--muted-foreground)] mb-1">Volume Change</div>
+            <div className="text-xs text-[var(--muted-foreground)] mb-1">{simplifyTerm("Volume Change", isEasyMode)}</div>
             <div className="flex items-center gap-2">
               <TrendingUp size={16} className={volumeTrend?.color} />
               <span className="font-semibold">
@@ -84,7 +86,7 @@ export function PocketGeometryAnalysis({
 
         {hydrophobicityDelta !== undefined && (
           <div className="p-3 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
-            <div className="text-xs text-[var(--muted-foreground)] mb-1">Hydrophobicity</div>
+            <div className="text-xs text-[var(--muted-foreground)] mb-1">{simplifyTerm("Hydrophobicity", isEasyMode)}</div>
             <span className="font-semibold">
               {hydrophobicityDelta > 0 ? "+" : ""}
               {hydrophobicityDelta.toFixed(2)}
@@ -97,7 +99,7 @@ export function PocketGeometryAnalysis({
 
         {polarityDelta !== undefined && (
           <div className="p-3 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
-            <div className="text-xs text-[var(--muted-foreground)] mb-1">Polarity</div>
+            <div className="text-xs text-[var(--muted-foreground)] mb-1">{simplifyTerm("Polarity", isEasyMode)}</div>
             <span className="font-semibold">
               {polarityDelta > 0 ? "+" : ""}
               {polarityDelta.toFixed(2)}

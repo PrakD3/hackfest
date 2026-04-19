@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useModeStore } from "@/components/ModeToggle";
+import { simplifyTerm } from "@/app/lib/easy-mode";
 import type {
   EvolutionEdge,
   EvolutionNode,
@@ -42,6 +44,7 @@ function methodColor(method: string): string {
 }
 
 export function EvolutionTree({ tree }: Props) {
+  const { isEasyMode } = useModeStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const nodeRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [svgPaths, setSvgPaths] = useState<SvgPath[]>([]);
@@ -181,7 +184,7 @@ export function EvolutionTree({ tree }: Props) {
           <div key={gen} className="flex flex-col items-center gap-3 z-10">
             {/* Column header */}
             <span className="text-[11px] font-semibold px-3 py-1 rounded-full bg-[var(--muted)] text-[var(--muted-foreground)] whitespace-nowrap">
-              {gen === 0 ? "Seed" : `Gen ${gen}`}
+              {gen === 0 ? simplifyTerm("Starting Molecule", isEasyMode) : `${simplifyTerm("Variation", isEasyMode)} ${gen}`}
             </span>
 
             {/* Node cards */}
@@ -241,7 +244,7 @@ export function EvolutionTree({ tree }: Props) {
                     color: methodColor(node.method),
                   }}
                 >
-                  {node.method.replace(/_/g, " ")}
+                  {simplifyTerm(node.method.replace(/_/g, " "), isEasyMode)}
                 </span>
               </div>
             ))}
@@ -257,7 +260,7 @@ export function EvolutionTree({ tree }: Props) {
           <svg width="20" height="8" aria-hidden="true">
             <line x1="0" y1="4" x2="20" y2="4" stroke="var(--stability-stable)" strokeWidth="1.5" />
           </svg>
-          Improved
+          {simplifyTerm("Improved", isEasyMode)}
         </span>
         <span className="flex items-center gap-1.5">
           <svg width="20" height="8" aria-hidden="true">
@@ -271,7 +274,7 @@ export function EvolutionTree({ tree }: Props) {
               strokeDasharray="4 3"
             />
           </svg>
-          Regressed
+          {simplifyTerm("Regressed", isEasyMode)}
         </span>
 
         <span className="mx-1 text-[var(--border)]">|</span>
@@ -282,7 +285,7 @@ export function EvolutionTree({ tree }: Props) {
               className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
               style={{ background: color }}
             />
-            {method.replace(/_/g, " ")}
+            {simplifyTerm(method.replace(/_/g, " "), isEasyMode)}
           </span>
         ))}
       </div>

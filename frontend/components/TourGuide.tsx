@@ -116,6 +116,15 @@ export const TOUR_STEPS: TourStep[] = [
     body: `The Docking agent tests each molecule by virtually placing it into the binding pocket and measuring how well it fits.\n\nThe tool (AutoDock Vina) tries many orientations — like rotating a key — and reports a docking score in kcal/mol. More negative = better fit.\n\n-9.5 kcal/mol is a strong binder.\n-6.0 kcal/mol is weak.\n\nOnly the top-scoring molecules survive to the next round.`,
   },
   {
+    id: "docking-tab",
+    title: "Deep Dive into Poses",
+    icon: "🔬",
+    placement: "top",
+    padding: 8,
+    page: "/analysis/[sessionId]",
+    body: `We've moved the detailed Docking results right here. In this tab, you can inspect 3D interactions for every single candidate.\n\nYou can see which amino acids are gripping the drug and exactly where the "hotspots" are. High-end discovery requires this visual proof.`,
+  },
+  {
     id: "selectivity-filter",
     title: "Safety check — only hit the right target",
     icon: "🎯",
@@ -1032,6 +1041,9 @@ export default function TourGuide({ isEasyMode, children }: TourGuideProps) {
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [spotlightRect, setSpotlightRect] = useState<SpotlightRect | null>(null);
   const [isInteractive, setIsInteractive] = useState(false);
+  
+  const isPendingResumeRef = useRef(false);
+  const completedSessionIdRef = useRef<string | null>(null);
   const [isPendingResume, setIsPendingResume] = useState(false);
 
   const step = TOUR_STEPS[currentIndex];
@@ -1067,13 +1079,27 @@ export default function TourGuide({ isEasyMode, children }: TourGuideProps) {
 
   // Listen for pause and pipeline completion events
   useEffect(() => {
-    const handlePause = () => setIsPendingResume(true);
-    const handleComplete = () => {
-      if (isPendingResume) {
+    const handlePause = () => {
+      isPendingResumeRef.current = true;
+      setIsPendingResume(true);
+    };
+    const handleComplete = (e: any) => {
+      if (e.detail?.sessionId) {
+        completedSessionIdRef.current = e.detail.sessionId;
+      }
+      // Logic 1: If the tour was explicitly paused by user clicking "Grab a coffee"
+      if (isPendingResumeRef.current) {
+        isPendingResumeRef.current = false;
         setIsPendingResume(false);
         setTimeout(() => {
           setShowResumeModal(true);
         }, 500);
+      } 
+      // Logic 2: If the tour is still active and visible, but we were on the "waiting" step
+      else if (isActive && step?.id === "waiting-for-pipeline") {
+        setTimeout(() => {
+          next();
+        }, 800);
       }
     };
     window.addEventListener("tour:pause-for-pipeline", handlePause);
@@ -1082,7 +1108,7 @@ export default function TourGuide({ isEasyMode, children }: TourGuideProps) {
       window.removeEventListener("tour:pause-for-pipeline", handlePause);
       window.removeEventListener("tour:pipeline-complete", handleComplete);
     };
-  }, [isPendingResume, startTour, goTo]);
+  }, [isActive, step, next]);
 
   useEffect(() => {
     if (!isActive) setIsInteractive(false);
@@ -1192,6 +1218,15 @@ export default function TourGuide({ isEasyMode, children }: TourGuideProps) {
           <ResumeModal
             onResume={() => {
               setShowResumeModal(false);
+              
+              // Handle cross-page navigation
+              if (completedSessionIdRef.current) {
+                const targetPath = `/analysis/${completedSessionIdRef.current}`;
+                if (!pathname.startsWith(targetPath)) {
+                  router.push(targetPath);
+                }
+              }
+
               startTour();
               const targetIdx = TOUR_STEPS.findIndex((s) => s.id === "molecule-cards");
               if (targetIdx !== -1) {

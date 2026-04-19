@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { useTourStore } from "./TourGuide";
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 export const useModeStore = create<{
   isEasyMode: boolean;
@@ -15,6 +16,9 @@ export const useModeStore = create<{
 export function ModeToggle() {
   const { isEasyMode, setEasyMode } = useModeStore();
   const { isActive } = useTourStore();
+  const pathname = usePathname();
+
+  if (pathname === "/") return null;
 
   return (
     <div className="fixed top-4 right-4 z-[9000] flex items-center gap-3">

@@ -37,10 +37,9 @@ export function SiteFooter({ variant = "default" }: SiteFooterProps) {
     <footer
       className={
         isSection
-          ? "card-section relative w-full min-h-svh overflow-hidden bg-card rounded-t-3xl border-t shadow-[0_-12px_48px_rgba(0,0,0,0.18)] flex flex-col justify-center"
+          ? "card-section relative w-full min-h-svh overflow-hidden bg-zinc-950 rounded-t-[3rem] border-t border-white/5 shadow-[0_-12px_48px_rgba(0,0,0,0.5)] flex flex-col justify-center text-white"
           : "relative mt-12 border-t bg-sidebar/60"
       }
-      style={{ borderColor: "var(--sidebar-border)" }}
     >
       <div
         className="pointer-events-none absolute inset-x-0 -top-px h-px"

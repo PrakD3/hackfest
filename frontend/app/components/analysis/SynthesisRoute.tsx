@@ -1,6 +1,7 @@
-"use client";
 import { AlertCircle, DollarSign, FlaskConical } from "lucide-react";
 import { Badge } from "@/app/components/ui/badge";
+import { useModeStore } from "@/components/ModeToggle";
+import { simplifyTerm, simplifyText } from "@/app/lib/easy-mode";
 
 interface SynthesisRouteProps {
   numSteps?: number;
@@ -15,6 +16,7 @@ export function SynthesisRoute({
   estimatedCost,
   synthesizable,
 }: SynthesisRouteProps) {
+  const { isEasyMode } = useModeStore();
   const getSALabel = (sa?: number): string => {
     if (sa === undefined) return "N/A";
     if (sa < 3) return "Easy";
@@ -40,7 +42,7 @@ export function SynthesisRoute({
       <div className="flex items-center justify-between">
         <h3 className="font-semibold flex items-center gap-2">
           <FlaskConical size={16} />
-          Synthesis Planning
+          {simplifyTerm("Synthesis Planning", isEasyMode)}
         </h3>
         <Badge variant={synthesizable ? "success" : "destructive"}>
           {getSyntheticabilityBadge()}
@@ -60,7 +62,7 @@ export function SynthesisRoute({
 
         {saScore !== undefined && (
           <div className={`p-3 rounded-lg border border-[var(--border)]/50 ${getSAColor(saScore)}`}>
-            <div className="text-xs text-[var(--muted-foreground)] mb-1">SA Score</div>
+            <div className="text-xs text-[var(--muted-foreground)] mb-1">{simplifyTerm("SA Score", isEasyMode)}</div>
             <div className="text-2xl font-bold">{saScore.toFixed(1)}</div>
             <div className="text-xs text-[var(--muted-foreground)] mt-1">{getSALabel(saScore)}</div>
           </div>
@@ -81,8 +83,7 @@ export function SynthesisRoute({
         <div className="flex items-start gap-2">
           <AlertCircle size={14} className="mt-0.5 text-blue-600 dark:text-blue-400 shrink-0" />
           <p className="text-xs text-blue-700 dark:text-blue-400">
-            Synthesis route planned with ASKCOS retrosynthesis. All reagents and intermediates are
-            purchasable or easily derived from commercial materials.
+            {simplifyText("Synthesis route planned with ASKCOS retrosynthesis. All reagents and intermediates are purchasable or easily derived from commercial materials.", isEasyMode)}
           </p>
         </div>
       </div>

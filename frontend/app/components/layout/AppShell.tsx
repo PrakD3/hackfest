@@ -459,6 +459,18 @@ function MainbarShell({ children, borderless }: MainbarShellProps) {
 import { AssistantChat } from "@/app/components/ui/AssistantChat";
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const isHomePage = pathname === "/";
+
+  if (isHomePage) {
+    return (
+      <div className="min-h-screen bg-black overflow-x-hidden">
+        {children}
+        <SiteFooter variant="section" />
+      </div>
+    );
+  }
+
   return (
     <SidebarShell>
       <MainbarShell>{children}</MainbarShell>

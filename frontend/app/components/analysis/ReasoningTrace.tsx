@@ -1,12 +1,15 @@
 "use client";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
+import { useModeStore } from "@/components/ModeToggle";
+import { simplifyTerm, simplifyText } from "@/app/lib/easy-mode";
 
 interface Props {
   trace: Record<string, string> | null;
 }
 
 export function ReasoningTrace({ trace }: Props) {
+  const { isEasyMode } = useModeStore();
   const [open, setOpen] = useState<string | null>(null);
 
   if (!trace || !Object.keys(trace).length) {
@@ -31,11 +34,11 @@ export function ReasoningTrace({ trace }: Props) {
             ) : (
               <ChevronRight size={14} className="shrink-0" />
             )}
-            {agent}
+            {simplifyTerm(agent, isEasyMode)}
           </button>
           {open === agent && (
             <div className="p-3 pt-0 text-sm text-[var(--muted-foreground)] border-t border-[var(--border)] leading-relaxed">
-              {text}
+              {simplifyText(text, isEasyMode)}
             </div>
           )}
         </div>

@@ -15,6 +15,8 @@ import { MoleculeViewer3D } from "@/app/components/analysis/MoleculeViewer3D";
 import { MDValidation } from "@/app/components/analysis/MDValidation";
 import { MoleculeCard } from "@/app/components/analysis/MoleculeCard";
 // Components
+import { useModeStore } from "@/components/ModeToggle";
+import { simplifyTerm, simplifyText } from "@/app/lib/easy-mode";
 import { PipelineStatus } from "@/app/components/analysis/PipelineStatus";
 import { PocketGeometryAnalysis } from "@/app/components/analysis/PocketGeometryAnalysis";
 import { ReasoningTrace } from "@/app/components/analysis/ReasoningTrace";
@@ -53,6 +55,7 @@ interface PageProps {
 export default function AnalysisPage({ params }: PageProps) {
   const { sessionId } = use(params);
   const router = useRouter();
+  const { isEasyMode } = useModeStore();
   const [isLocallyStopped, setIsLocallyStopped] = useState(false);
   const [isDockingModalOpen, setIsDockingModalOpen] = useState(false);
   const [isDockingModal3D, setIsDockingModal3D] = useState(true);
@@ -241,11 +244,11 @@ export default function AnalysisPage({ params }: PageProps) {
 
   useEffect(() => {
     if (isSessionComplete) {
-      window.dispatchEvent(new CustomEvent("tour:pipeline-complete"));
+      window.dispatchEvent(new CustomEvent("tour:pipeline-complete", { detail: { sessionId } }));
     }
     const handleCheck = () => {
       if (isSessionComplete) {
-        window.dispatchEvent(new CustomEvent("tour:pipeline-complete"));
+        window.dispatchEvent(new CustomEvent("tour:pipeline-complete", { detail: { sessionId } }));
       }
     };
     window.addEventListener("tour:check-pipeline", handleCheck);
@@ -741,25 +744,25 @@ export default function AnalysisPage({ params }: PageProps) {
                           : ""}
                       </span>
                     </div>
-                    <p className="text-sm leading-relaxed">{report.summary}</p>
+                    <p className="text-sm leading-relaxed">{simplifyText(report.summary, isEasyMode)}</p>
                   </div>
                 )}
 
                 <Tabs defaultValue="leads" className="w-full">
                   <TabsList className="mb-4 flex-wrap h-auto gap-1">
-                    <TabsTrigger value="leads">Top Leads</TabsTrigger>
-                    <TabsTrigger value="docking">Docking</TabsTrigger>
-                    <TabsTrigger value="pocket">Pocket Geometry</TabsTrigger>
-                    <TabsTrigger value="selectivity">Selectivity</TabsTrigger>
-                    <TabsTrigger value="evolution">Evolution Tree</TabsTrigger>
-                    <TabsTrigger value="admet">ADMET</TabsTrigger>
-                    <TabsTrigger value="md">Molecular Dynamics</TabsTrigger>
-                    <TabsTrigger value="synthesis">Synthesis</TabsTrigger>
-                    <TabsTrigger value="trials">Clinical Trials</TabsTrigger>
-                    <TabsTrigger value="graph">Knowledge Graph</TabsTrigger>
-                    <TabsTrigger value="reasoning">Reasoning</TabsTrigger>
-                    <TabsTrigger value="literature">Literature</TabsTrigger>
-                    <TabsTrigger value="export">Export</TabsTrigger>
+                    <TabsTrigger value="leads">{simplifyTerm("Top Leads", isEasyMode)}</TabsTrigger>
+                    <TabsTrigger value="docking" data-tour="docking-tab">{simplifyTerm("Docking", isEasyMode)}</TabsTrigger>
+                    <TabsTrigger value="pocket">{simplifyTerm("Pocket Geometry", isEasyMode)}</TabsTrigger>
+                    <TabsTrigger value="selectivity">{simplifyTerm("Selectivity", isEasyMode)}</TabsTrigger>
+                    <TabsTrigger value="evolution">{simplifyTerm("Evolution Tree", isEasyMode)}</TabsTrigger>
+                    <TabsTrigger value="admet">{simplifyTerm("ADMET", isEasyMode)}</TabsTrigger>
+                    <TabsTrigger value="md">{simplifyTerm("Molecular Dynamics", isEasyMode)}</TabsTrigger>
+                    <TabsTrigger value="synthesis">{simplifyTerm("Synthesis", isEasyMode)}</TabsTrigger>
+                    <TabsTrigger value="trials">{simplifyTerm("Clinical Trials", isEasyMode)}</TabsTrigger>
+                    <TabsTrigger value="graph">{simplifyTerm("Knowledge Graph", isEasyMode)}</TabsTrigger>
+                    <TabsTrigger value="reasoning">{simplifyTerm("Reasoning", isEasyMode)}</TabsTrigger>
+                    <TabsTrigger value="literature">{simplifyTerm("Literature", isEasyMode)}</TabsTrigger>
+                    <TabsTrigger value="export">{simplifyTerm("Export", isEasyMode)}</TabsTrigger>
                   </TabsList>
 
                   {/* Top Leads */}

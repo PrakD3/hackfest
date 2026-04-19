@@ -3,6 +3,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { AlertTriangle, RotateCcw, Search, ShieldCheck, ShieldX, Zap } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Badge } from "@/app/components/ui/badge";
+import { useModeStore } from "@/components/ModeToggle";
+import { simplifyTerm } from "@/app/lib/easy-mode";
 import {
   Dialog,
   DialogClose,
@@ -45,6 +47,7 @@ export function MoleculeCard({
   ligandPoseFormat,
   showProtein = false,
 }: Props) {
+  const { isEasyMode } = useModeStore();
   const [show3D, setShow3D] = useState(false);
   const [isViewerModalOpen, setIsViewerModalOpen] = useState(false);
   const [isModal3D, setIsModal3D] = useState(false);
@@ -181,7 +184,7 @@ export function MoleculeCard({
       <div className="flex items-center gap-2 pt-1 border-t border-[var(--border)]/30">
         <Switch checked={show3D} onCheckedChange={setShow3D} />
         <span className="text-xs font-medium text-[var(--muted-foreground)]">
-          {show3D ? "3D Projection" : "2D Molecule"}
+          {show3D ? simplifyTerm("3D Projection", isEasyMode) : simplifyTerm("2D Molecule", isEasyMode)}
         </span>
       </div>
       {show3D && (
@@ -306,7 +309,7 @@ export function MoleculeCard({
       <div className="space-y-2">
         {lead.stability_label && (
           <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
-            <span className="text-[var(--muted-foreground)]">MD Stability</span>
+            <span className="text-[var(--muted-foreground)]">{simplifyTerm("MD Stability", isEasyMode)}</span>
             <Badge
               variant={
                 lead.stability_label === "STABLE"
@@ -324,7 +327,7 @@ export function MoleculeCard({
 
         {lead.sa_score !== undefined && (
           <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]/50">
-            <span className="text-[var(--muted-foreground)]">Synthesis</span>
+            <span className="text-[var(--muted-foreground)]">{simplifyTerm("Synthesis", isEasyMode)}</span>
             <span className="font-mono font-bold">
               SA {lead.sa_score.toFixed(1)} •{" "}
               {lead.synthesis_steps ? `${lead.synthesis_steps} steps` : "N/A"}
@@ -344,12 +347,12 @@ export function MoleculeCard({
         {lead.admet_pass ? (
           <Badge variant="success">
             <ShieldCheck size={10} className="mr-1" />
-            ADMET ✓
+            {simplifyTerm("ADMET", isEasyMode)} ✓
           </Badge>
         ) : (
           <Badge variant="destructive">
             <ShieldX size={10} className="mr-1" />
-            ADMET ✗
+            {simplifyTerm("ADMET", isEasyMode)} ✗
           </Badge>
         )}
         {lead.resistance_flag && (

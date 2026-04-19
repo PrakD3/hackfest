@@ -2,12 +2,15 @@
 import { PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer } from "recharts";
 import { Badge } from "@/app/components/ui/badge";
 import type { ADMETProfile } from "@/app/lib/types";
+import { useModeStore } from "@/components/ModeToggle";
+import { simplifyTerm } from "@/app/lib/easy-mode";
 
 interface Props {
   profiles: ADMETProfile[];
 }
 
 export function ADMETPanel({ profiles }: Props) {
+  const { isEasyMode } = useModeStore();
   if (!profiles.length) {
     return (
       <div className="text-sm text-[var(--muted-foreground)] p-4">No ADMET data available.</div>
@@ -18,23 +21,23 @@ export function ADMETPanel({ profiles }: Props) {
 
   const radarData = [
     {
-      metric: "MW",
+      metric: simplifyTerm("Weight", isEasyMode),
       value: top.mw !== undefined ? Math.min(100, top.mw / 5) : 0,
     },
     {
-      metric: "LogP",
+      metric: simplifyTerm("Fattiness", isEasyMode),
       value: top.logp !== undefined ? Math.min(100, ((top.logp + 2) / 9) * 100) : 50,
     },
     {
-      metric: "HBD",
+      metric: simplifyTerm("H-Donors", isEasyMode),
       value: top.hbd !== undefined ? Math.min(100, (1 - top.hbd / 5) * 100) : 100,
     },
     {
-      metric: "HBA",
+      metric: simplifyTerm("H-Acceptors", isEasyMode),
       value: top.hba !== undefined ? Math.min(100, (1 - top.hba / 10) * 100) : 100,
     },
     {
-      metric: "Bioavail",
+      metric: simplifyTerm("Blood Prep", isEasyMode),
       value: (top.bioavailability ?? 0) * 100,
     },
     {
@@ -75,7 +78,7 @@ export function ADMETPanel({ profiles }: Props) {
                 variant={p.lipinski_pass ? "success" : "destructive"}
                 className="text-[10px] px-1"
               >
-                Lipinski
+                {simplifyTerm("Standard Rule", isEasyMode)}
               </Badge>
               {p.pains_flag && (
                 <Badge variant="warning" className="text-[10px] px-1">

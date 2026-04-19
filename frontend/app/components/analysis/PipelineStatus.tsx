@@ -1,7 +1,8 @@
-"use client";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, CheckCircle, Circle, CircleDashed, Loader2 } from "lucide-react";
 import type { AgentEvent } from "@/app/lib/types";
+import { useModeStore } from "@/components/ModeToggle";
+import { simplifyTerm } from "@/app/lib/easy-mode";
 
 const AGENTS = [
   // Stage 1: Data Acquisition
@@ -58,6 +59,7 @@ function mapAgentStatus(status: string): AgentStatus {
 }
 
 export function PipelineStatus({ sessionId, events, isComplete, isCancelled, agentStatuses, startTime }: Props) {
+  const { isEasyMode } = useModeStore();
   const statusMap: Record<string, AgentStatus> = {};
   if (agentStatuses) {
     for (const [name, status] of Object.entries(agentStatuses)) {
@@ -84,7 +86,7 @@ export function PipelineStatus({ sessionId, events, isComplete, isCancelled, age
         </div>
       )}
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold">Pipeline Progress</h3>
+        <h3 className="text-sm font-semibold">{simplifyTerm("Pipeline Progress", isEasyMode)}</h3>
         {!isComplete && startTime && (
           <span className="text-xs text-[var(--muted-foreground)]">{elapsed}s</span>
         )}
@@ -120,7 +122,7 @@ export function PipelineStatus({ sessionId, events, isComplete, isCancelled, age
               {status === "waiting" && (
                 <Circle size={12} className="text-[var(--muted-foreground)] shrink-0" />
               )}
-              <span
+               <span
                 className={
                   status === "running"
                     ? "font-medium"
@@ -129,7 +131,7 @@ export function PipelineStatus({ sessionId, events, isComplete, isCancelled, age
                       : "text-[var(--muted-foreground)]"
                 }
               >
-                {agent.label}
+                {simplifyTerm(agent.label, isEasyMode)}
               </span>
             </motion.div>
           );
