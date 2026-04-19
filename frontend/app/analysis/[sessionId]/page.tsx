@@ -19,7 +19,6 @@ import { PipelineStatus } from "@/app/components/analysis/PipelineStatus";
 import { PocketGeometryAnalysis } from "@/app/components/analysis/PocketGeometryAnalysis";
 import { ReasoningTrace } from "@/app/components/analysis/ReasoningTrace";
 import { ResistanceProfile } from "@/app/components/analysis/ResistanceProfile";
-import { SaveDiscoveryButton } from "@/app/components/analysis/SaveDiscoveryButton";
 import { SimilarityPanel } from "@/app/components/analysis/SimilarityPanel";
 import { SynthesisRoute } from "@/app/components/analysis/SynthesisRoute";
 import { ToxicophorePanel } from "@/app/components/analysis/ToxicophorePanel";
@@ -602,9 +601,6 @@ export default function AnalysisPage({ params }: PageProps) {
             New Analysis
           </button>
           <div className="flex items-center gap-3">
-            {isSessionComplete && result && !isCancelled && (
-              <SaveDiscoveryButton sessionId={sessionId} initialDiscoveryId={result.discovery_id} />
-            )}
           </div>
         </div>
 
@@ -752,13 +748,13 @@ export default function AnalysisPage({ params }: PageProps) {
                 <Tabs defaultValue="leads" className="w-full">
                   <TabsList className="mb-4 flex-wrap h-auto gap-1">
                     <TabsTrigger value="leads">Top Leads</TabsTrigger>
+                    <TabsTrigger value="docking">Docking</TabsTrigger>
                     <TabsTrigger value="pocket">Pocket Geometry</TabsTrigger>
                     <TabsTrigger value="selectivity">Selectivity</TabsTrigger>
                     <TabsTrigger value="evolution">Evolution Tree</TabsTrigger>
                     <TabsTrigger value="admet">ADMET</TabsTrigger>
                     <TabsTrigger value="md">Molecular Dynamics</TabsTrigger>
                     <TabsTrigger value="synthesis">Synthesis</TabsTrigger>
-                    <TabsTrigger value="docking">Docking</TabsTrigger>
                     <TabsTrigger value="trials">Clinical Trials</TabsTrigger>
                     <TabsTrigger value="graph">Knowledge Graph</TabsTrigger>
                     <TabsTrigger value="reasoning">Reasoning</TabsTrigger>

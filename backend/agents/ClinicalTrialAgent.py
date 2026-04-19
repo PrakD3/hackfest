@@ -36,8 +36,7 @@ class ClinicalTrialAgent:
                 resp = await client.get(
                     self.BASE_URL,
                     params={
-                        "query.cond": query,
-                        "query.intr": gene,
+                        "query.term": query,
                         "filter.overallStatus": "RECRUITING,ACTIVE_NOT_RECRUITING",
                         "pageSize": 5,
                         "format": "json",
@@ -55,12 +54,17 @@ class ClinicalTrialAgent:
                     id_mod = proto.get("identificationModule", {})
                     status_mod = proto.get("statusModule", {})
                     arms_mod = proto.get("armsInterventionsModule", {})
+                    design_mod = proto.get("designModule", {})
+                    
+                    phases = design_mod.get("phases", [])
+                    phase = phases[0].replace("PHASE", "Phase ") if phases else "N/A"
+                    
                     nct = id_mod.get("nctId", "")
                     trials.append(
                         {
                             "nct_id": nct,
                             "title": id_mod.get("briefTitle", ""),
-                            "phase": status_mod.get("phase", "N/A"),
+                            "phase": phase,
                             "status": status_mod.get("overallStatus", ""),
                             "condition": query,
                             "interventions": [
