@@ -16,7 +16,7 @@ export function SimilarityPanel({ similarMolecules }: Props) {
   return (
     <div className="space-y-2">
       <p className="text-sm text-[var(--muted-foreground)] mb-3">
-        {similarMolecules.length} similar molecules found in ChEMBL/PubChem:
+        {safeMolecules.length} similar molecules found in ChEMBL/PubChem:
       </p>
       {safeMolecules.map((s, i) => (
         <div
