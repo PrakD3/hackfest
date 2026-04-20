@@ -1,4 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// Automatically strip trailing /api to prevent double paths in fetch calls
+const rawUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:7860";
+const API_URL = rawUrl.replace(/\/api$/, "");
 
 export async function startAnalysis(
   query: string,
