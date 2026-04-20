@@ -15,21 +15,67 @@
 
 The system leverages a hierarchical 22-agent architecture to move from mutation parsing to synthesis-ready lead compounds in as little as 90 seconds (standard) to 6 hours (with full Molecular Dynamics validation).
 
-### Pipeline Workflow
+### System Architecture
 
 ```mermaid
 graph TD
-    classDef stage fill:#f8f9fa,stroke:#334155,stroke-width:1px;
-    classDef highlight fill:#e2e8f0,stroke:#1e293b,stroke-width:2px;
+    %% Global Styling
+    classDef acquisition fill:#eff6ff,stroke:#1d4ed8,stroke-width:2px,color:#1e3a8a
+    classDef analysis fill:#fefce8,stroke:#a16207,stroke-width:2px,color:#713f12
+    classDef design fill:#fff7ed,stroke:#c2410c,stroke-width:2px,color:#7c2d12
+    classDef validation fill:#fef2f2,stroke:#b91c1c,stroke-width:2px,color:#7f1d1d
+    classDef context fill:#f5f3ff,stroke:#6d28d9,stroke-width:2px,color:#4c1d95
+    classDef output fill:#f0fdf4,stroke:#15803d,stroke-width:2px,color:#14532d
+    classDef start_end fill:#f8fafc,stroke:#334155,stroke-width:2px,color:#0f172a
 
-    Start([Mutation Query]) --> Data[Data Acquisition]:::stage
-    Data --> Struct[Structure Analysis]:::stage
-    Struct --> Design[Molecule Design]:::stage
-    Design --> Docking[Docking & Scoring]:::stage
-    Docking --> Selectivity[Selectivity Filter]:::highlight
-    Selectivity --> Validation[GNN & MD Validation]:::stage
-    Validation --> Synthesis[Synthesis Planning]:::stage
-    Synthesis --> Report([Final Report])
+    Start([Mutation Query]):::start_end --> Stage1[Stage 1: Multi-Source Acquisition]:::acquisition
+    
+    subgraph S1 [Agents 1-6]
+        Stage1 --> Parser[Mutation Parser]:::acquisition
+        Parser --> Planner[Query Orchestrator]:::acquisition
+        Planner --> Fetch[PubMed + UniProt + RCSB + PubChem]:::acquisition
+    end
+
+    Fetch --> Stage2[Stage 2: Structural Modeling]:::analysis
+    
+    subgraph S2 [Agents 7-9]
+        Stage2 --> ESMF[ESMFold / Protein Prep]:::analysis
+        ESMF --> ESM1v[ESM-1v Pathogenicity]:::analysis
+        ESM1v --> Pock[fpocket Delta Analysis]:::analysis
+    end
+
+    Pock --> Stage3[Stage 3: Generative Design]:::design
+    
+    subgraph S3 [Agents 10-14]
+        Stage3 --> MGen[Pocket2Mol Generative]:::design
+        MGen --> Dock[Vina / Gnina Docking]:::design
+        Dock --> Select[Selectivity Dual-Docking Filter]:::design
+        Select --> Opti[Bioisostere Optimization]:::design
+    end
+
+    Opti --> Stage4[Stage 4: Validation & Physics]:::validation
+    
+    subgraph S4 [Agents 15-17]
+        Stage4 --> GNN[DimeNet++ GNN Filter]:::validation
+        GNN -- "Top 2 Leads Only" --> MDVal[OpenMM 50ns MD]:::validation
+        MDVal --> Resist[Resistance Forecasting]:::validation
+    end
+
+    Resist --> Stage5[Stage 5: Clinical Alignment]:::context
+    
+    subgraph S5 [Agents 18-20]
+        Stage5 --> Trial[ClinicalTrials.gov V2]:::context
+        Trial --> Lit[Knowledge Graph Assembly]:::context
+    end
+
+    Lit --> Stage6[Stage 6: Final Synthesis]:::output
+    
+    subgraph S6 [Agents 21-22]
+        Stage6 --> ASK[ASKCOS Retrosynthesis]:::output
+        ASK --> Rep[Enterprise Report Generation]:::output
+    end
+
+    Rep --> End([Final Drug Report]):::start_end
 ```
 
 ### Key Metrics & Precision
