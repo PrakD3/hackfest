@@ -59,3 +59,7 @@ app.include_router(discoveries.router, prefix="/api")
 app.include_router(themes.router,      prefix="/api")
 app.include_router(docked_poses.router, prefix="/api")
 app.include_router(structure.router,    prefix="/api")
++
++@app.get("/")
++async def root():
++    return {"status": "ok", "service": "ProEngine Labs Backend"}
