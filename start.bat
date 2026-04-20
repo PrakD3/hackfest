@@ -35,7 +35,7 @@ pip install -r requirements.txt -q
 pip install "urllib3<2.0" -q
 
 echo   Launching backend...
-start "ProEngine Labs - Backend" cmd /k "call .venv\Scripts\activate.bat && uvicorn main:app --reload --host 0.0.0.0 --port 8000"
+start "ProEngine Labs - Backend" cmd /k "call .venv\Scripts\activate.bat && uvicorn main:app --reload --host 0.0.0.0 --port 7860"
 cd ..
 
 :: --- 3. Frontend Setup ---
@@ -66,7 +66,7 @@ cd ..
 echo.
 echo ✅ ProEngine Labs Services Starting:
 echo    Frontend ^> http://localhost:3000
-echo    Backend  ^> http://localhost:8000
+echo    Backend  ^> http://localhost:7860
 echo.
 echo Close the separate windows to stop the servers.
 pause

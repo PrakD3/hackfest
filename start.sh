@@ -157,7 +157,7 @@ cat > "$TOOLS_DIR/run_backend.sh" << EOF
 source "$CONDA_PATH/etc/profile.d/conda.sh"
 conda activate "$ENV_NAME"
 cd "$PROJECT_ROOT/backend"
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn main:app --reload --host 0.0.0.0 --port 7860
 EOF
 chmod +x "$TOOLS_DIR/run_backend.sh"
 
@@ -191,7 +191,7 @@ else
 fi
 
 echo ""
-echo "📡 Backend: http://localhost:8000"
+echo "📡 Backend: http://localhost:7860"
 echo "🌐 Frontend: http://localhost:3000"
 echo "--------------------------------------"
 echo "Press Ctrl+C in this terminal to exit (NOTE: Background processes may persist)"
