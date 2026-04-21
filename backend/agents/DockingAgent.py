@@ -45,11 +45,13 @@ class DockingAgent:
 
     async def _execute(self, state: dict) -> dict:
         log = get_logger(self.__class__.__name__)
-        molecules = state.get("generated_molecules", [])
+        # Supporting both state naming conventions
+        molecules = state.get("generated_molecules") or state.get("molecules") or []
         pocket = state.get("binding_pocket") or {}
         pdb_content = state.get("pdb_content")
-        
+
         if not molecules or not pdb_content:
+            log.warning("No molecules or PDB content provided for docking.")
             return {"docking_results": []}
 
         local_gnina = "/home/rafan/HF26-24/tools/gnina"
@@ -67,9 +69,10 @@ class DockingAgent:
         pose_dir.mkdir(parents=True, exist_ok=True)
  
         semaphore = asyncio.Semaphore(4)
-        results = []
+        completed_count = 0
 
         async def docked_task(idx, mol_data):
+            nonlocal completed_count
             async with semaphore:
                 smiles = mol_data.get("smiles")
                 if not smiles: return None
@@ -79,10 +82,10 @@ class DockingAgent:
                     pose_dir=pose_dir, pose_id=_pose_id(smiles, idx)
                 )
                 
-                # Update progress for EACH completion
-                current_prog = 30 + int((len(results) / len(molecules)) * 60)
+                completed_count += 1
+                current_prog = 30 + int((completed_count / len(molecules)) * 60)
                 if hasattr(self, 'update_progress'):
-                    await self.update_progress(current_prog, f"Docking {len(results)+1}/{len(molecules)}...")
+                    await self.update_progress(current_prog, f"Docking {completed_count}/{len(molecules)}...")
                 
                 if energy is not None:
                     return {
@@ -96,11 +99,11 @@ class DockingAgent:
                     }
                 return None
 
-        # Execute all tasks
+        # Execute all tasks in parallel
         tasks = [docked_task(i, m) for i, m in enumerate(molecules)]
         docking_results_all = await asyncio.gather(*tasks)
         
-        # Filter out failed ones
+        # Filter and return results
         results = [r for r in docking_results_all if r is not None]
  
         return {"docking_results": sorted(results, key=lambda x: x["binding_energy"])}
