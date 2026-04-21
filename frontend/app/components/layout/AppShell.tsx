@@ -297,13 +297,7 @@ function SidebarShellContent({ children, pathname }: { children?: ReactNode; pat
       else if (gene) base = gene;
     }
 
-    try {
-      const date = new Date(discovery.created_at);
-      const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-      return `${base} (${timeStr})`;
-    } catch {
-      return base;
-    }
+    return base;
   };
 
   useEffect(() => {
